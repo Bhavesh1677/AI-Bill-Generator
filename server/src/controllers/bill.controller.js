@@ -6,6 +6,12 @@ import { BillItem } from "../models/billItem.model.js";
 import { Client } from "../models/client.model.js";
 import { Product } from "../models/product.model.js";
 
+const parseSizeFactor = (sizeVal) => {
+  if (sizeVal === undefined || sizeVal === null) return 1;
+  const parsed = parseFloat(sizeVal);
+  return isNaN(parsed) ? 1 : parsed;
+};
+
 const createBill = asyncHandler(async (req, res) => {
   const { billNumber, clientId, issueDate, dueDate, status, items } = req.body;
 
@@ -41,13 +47,22 @@ const createBill = asyncHandler(async (req, res) => {
       throw new ApiError(404, `Product with ID ${item.productId} not found or unauthorized`);
     }
 
-    const subtotal = Number((product.price * item.quantity).toFixed(2));
+    const brandNameToUse = item.brandName !== undefined ? item.brandName : (product.brandName || "");
+    const sizeToUse = item.size !== undefined ? item.size : (product.size || "1");
+    const rateToUse = item.unitPrice !== undefined ? Number(item.unitPrice) : product.price;
+
+    // Subtotal calculation: quantity * rate
+    const subtotal = Number((Number(item.quantity) * rateToUse).toFixed(2));
     total += subtotal;
 
     processedItems.push({
       productId: product._id,
       quantity: Number(item.quantity),
-      unitPrice: product.price,
+      billingUnit: item.billingUnit || product.unit,
+      billingQuantity: Number(item.quantity),
+      brandName: brandNameToUse,
+      size: sizeToUse,
+      unitPrice: rateToUse,
       subtotal,
     });
   }
@@ -99,8 +114,8 @@ const getBillById = asyncHandler(async (req, res) => {
   const { billId } = req.params;
 
   const bill = await Bill.findOne({ _id: billId, userId: req.user._id })
-    .populate("clientId", "name email phone address")
-    .populate("userId", "name email");
+    .populate("clientId", "name businessName email phone address")
+    .populate("userId", "name email phone address businessName upiId businessLogo");
 
   if (!bill) {
     throw new ApiError(404, "Bill not found or unauthorized");
@@ -108,7 +123,7 @@ const getBillById = asyncHandler(async (req, res) => {
 
   const items = await BillItem.find({ billId: bill._id }).populate(
     "productId",
-    "name description price unit"
+    "name brandName quantity price unit"
   );
 
   return res.status(200).json(

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import API from "../utils/api";
-import { FiPrinter, FiTrash2, FiArrowLeft, FiClock, FiFileText, FiCheckCircle } from "react-icons/fi";
+import { FiPrinter, FiTrash2, FiArrowLeft } from "react-icons/fi";
 
 const BillDetail = () => {
   const { id } = useParams();
@@ -28,7 +28,9 @@ const BillDetail = () => {
   };
 
   useEffect(() => {
-    fetchBillDetails();
+    if (id) {
+      fetchBillDetails();
+    }
   }, [id]);
 
   const handleStatusChange = async (e) => {
@@ -64,9 +66,9 @@ const BillDetail = () => {
   };
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat("en-US", {
+    return new Intl.NumberFormat("en-IN", {
       style: "currency",
-      currency: "USD",
+      currency: "INR",
     }).format(amount);
   };
 
@@ -105,21 +107,47 @@ const BillDetail = () => {
     );
   }
 
+  const upiId = bill.userId?.upiId;
+  const totalQtySum = items.reduce((sum, item) => sum + (item.billingQuantity !== undefined ? item.billingQuantity : item.quantity || 0), 0);
+  
+  const formatSizeWithUnit = (size, unit) => {
+    if (!size) return "-";
+    const sizeStr = size.toString().trim();
+    if (/[a-zA-Z]$/.test(sizeStr)) {
+      return sizeStr;
+    }
+    const displayUnit = unit || "";
+    return `${sizeStr}${displayUnit}`.trim();
+  };
+
+  const issueDateFormatted = new Date(bill.issueDate).toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "numeric",
+    year: "numeric"
+  });
+  const dueDateFormatted = bill.dueDate 
+    ? new Date(bill.dueDate).toLocaleDateString("en-IN", {
+        day: "numeric",
+        month: "numeric",
+        year: "numeric"
+      })
+    : "N/A";
+
   return (
-    <div className="animate-fade-in print-page-container">
+    <div className="animate-fade-in print-page-container" style={{ paddingBottom: "50px" }}>
       {/* Detail actions top panel */}
       <div style={styles.topActions} className="no-print">
         <Link to="/bills" style={styles.backBtn}>
           <FiArrowLeft size={16} />
-          <span>Back to Invoices</span>
+          <span>Back to Bills</span>
         </Link>
 
         <div style={styles.actionGroup}>
           <div className="form-group" style={{ margin: 0, display: "flex", alignItems: "center", gap: "10px" }}>
-            <label style={{ margin: 0, fontSize: "0.85rem", fontWeight: "600" }}>Change Status:</label>
+            <label style={{ margin: 0, fontSize: "0.85rem", fontWeight: "600", color: "#fff" }}>Change Status:</label>
             <select
               className="form-input"
-              style={{ width: "120px", padding: "8px 12px" }}
+              style={{ width: "120px", padding: "8px 12px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "#fff", borderRadius: "8px" }}
               value={bill.status}
               onChange={handleStatusChange}
               disabled={statusUpdating}
@@ -131,98 +159,117 @@ const BillDetail = () => {
             </select>
           </div>
 
-          <button className="btn btn-secondary" onClick={handlePrint}>
+          <button className="btn btn-secondary" onClick={handlePrint} style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
             <FiPrinter size={16} />
-            <span>Print Invoice</span>
+            <span>Print Bill</span>
           </button>
 
-          <button className="btn btn-danger" style={{ padding: "10px 16px" }} onClick={handleDeleteBill}>
+          <button className="btn btn-danger" style={{ padding: "10px 16px", display: "inline-flex", alignItems: "center" }} onClick={handleDeleteBill}>
             <FiTrash2 size={16} />
           </button>
         </div>
       </div>
 
-      {/* Main invoice sheet */}
-      <div className="glass-panel invoice-sheet" style={styles.sheet}>
-        {/* Invoice Banner Header */}
-        <div style={styles.sheetHeader}>
+      {/* Main Modern Minimalist Bill Sheet */}
+      <div className="invoice-sheet-modern" style={styles.sheet}>
+        
+        {/* HEADER SECTION */}
+        <div style={styles.headerRow}>
           <div>
-            <div style={styles.brandRow}>
-              <div style={styles.logoIcon}>⚡</div>
-              <h2 style={styles.logoText}>Antigravity Bill</h2>
-            </div>
-            <p style={styles.issuerText}>Issued by: {bill.userId?.name || "Biller Profile"}</p>
-            <p style={styles.issuerSubText}>{bill.userId?.email}</p>
+            {bill.userId?.businessLogo ? (
+              <img
+                src={bill.userId.businessLogo}
+                alt={bill.userId?.businessName || "Business Logo"}
+                style={styles.logoImage}
+              />
+            ) : (
+              <h1 style={styles.invoiceTitle}>INVOICE</h1>
+            )}
+            <span style={styles.invoiceNumber}>#{bill.billNumber}</span>
           </div>
 
-          <div style={{ textAlign: "right" }}>
-            <h1 style={styles.billNumber}>{bill.billNumber}</h1>
-            <span className={`status-badge ${getStatusBadge(bill.status)}`} style={{ marginTop: "10px" }}>
-              {bill.status}
-            </span>
+          <div style={styles.datesContainer}>
+            <div style={styles.dateBlock}>
+              <span style={styles.metaLabel}>DATE</span>
+              <span style={styles.metaValue}>{issueDateFormatted}</span>
+            </div>
+            <div style={styles.dateBlock}>
+              <span style={styles.metaLabel}>DUE DATE</span>
+              <span style={styles.metaValue}>{dueDateFormatted}</span>
+            </div>
           </div>
         </div>
 
         <div style={styles.divider}></div>
 
-        {/* Address Cards */}
-        <div style={styles.addressSection}>
-          <div style={styles.addressCard}>
-            <h4 style={styles.addressTitle}>Bill To:</h4>
-            {bill.clientId ? (
-              <>
-                <p style={styles.clientName}>{bill.clientId.name}</p>
-                <p style={styles.addressLine}>{bill.clientId.email}</p>
-                {bill.clientId.phone && <p style={styles.addressLine}>Phone: {bill.clientId.phone}</p>}
-                {bill.clientId.address && <p style={styles.addressLine}>{bill.clientId.address}</p>}
-              </>
-            ) : (
-              <p style={{ ...styles.addressLine, color: "var(--accent-coral)", fontWeight: "600" }}>[Client Profile Deleted]</p>
+        {/* ADDRESSES SECTION */}
+        <div style={styles.addressesRow}>
+          {/* FROM seller */}
+          <div style={styles.addressBlock}>
+            <span style={styles.addressLabel}>FROM</span>
+            <h4 style={styles.addressName}>{bill.userId?.businessName || bill.userId?.name || "Biller Profile"}</h4>
+            {bill.userId?.businessName && (
+              <p style={styles.addressSubtext}>Owner: {bill.userId?.name}</p>
             )}
+            <p style={styles.addressSubtext}>{bill.userId?.address || "No address provided"}</p>
+            <p style={styles.addressSubtext}>{bill.userId?.phone && `Mobile: ${bill.userId?.phone}`}</p>
+            <p style={styles.addressSubtext}>{bill.userId?.email}</p>
           </div>
 
-          <div style={styles.metaCard}>
-            <div style={styles.metaRow}>
-              <span style={styles.metaLabel}>Issue Date:</span>
-              <span style={styles.metaVal}>{new Date(bill.issueDate).toLocaleDateString()}</span>
-            </div>
-            <div style={styles.metaRow}>
-              <span style={styles.metaLabel}>Due Date:</span>
-              <span style={{ ...styles.metaVal, color: "var(--accent-amber)" }}>
-                {new Date(bill.dueDate).toLocaleDateString()}
-              </span>
-            </div>
-            <div style={styles.metaRow}>
-              <span style={styles.metaLabel}>Payment Terms:</span>
-              <span style={styles.metaVal}>Net 15</span>
-            </div>
+          {/* BILLED TO client */}
+          <div style={styles.addressBlock}>
+            <span style={styles.addressLabel}>BILLED TO</span>
+            {bill.clientId ? (
+              <>
+                <h4 style={styles.addressName}>{bill.clientId.businessName || bill.clientId.name}</h4>
+                {bill.clientId.businessName && (
+                  <p style={styles.addressSubtext}>Contact: {bill.clientId.name}</p>
+                )}
+                {bill.clientId.address && (
+                  <p style={styles.addressSubtext}>{bill.clientId.address}</p>
+                )}
+                {bill.clientId.phone && (
+                  <p style={styles.addressSubtext}>Mobile: {bill.clientId.phone}</p>
+                )}
+              </>
+            ) : (
+              <p style={{ color: "#ef4444", fontWeight: "600", fontSize: "0.875rem" }}>[Client Profile Deleted]</p>
+            )}
           </div>
         </div>
 
-        {/* Line Items Table */}
-        <div style={{ marginTop: "40px" }}>
+        {/* ITEMS TABLE SECTION */}
+        <div style={styles.tableContainer}>
           <table style={styles.table}>
             <thead>
               <tr style={styles.tableHeaderRow}>
-                <th style={styles.th}>Product / Service</th>
-                <th style={styles.th}>Description</th>
-                <th style={{ ...styles.th, textAlign: "center" }}>Qty</th>
-                <th style={{ ...styles.th, textAlign: "right" }}>Unit Price</th>
-                <th style={{ ...styles.th, textAlign: "right" }}>Subtotal</th>
+                <th style={{ ...styles.th, textAlign: "left", width: "40%" }}>ITEM</th>
+                <th style={{ ...styles.th, textAlign: "left", width: "15%" }}>BRAND NAME</th>
+                <th style={{ ...styles.th, textAlign: "center", width: "10%" }}>SIZE</th>
+                <th style={{ ...styles.th, textAlign: "center", width: "10%" }}>TOTAL QTY</th>
+                <th style={{ ...styles.th, textAlign: "right", width: "10%" }}>RATE</th>
+                <th style={{ ...styles.th, textAlign: "right", width: "15%" }}>AMOUNT</th>
               </tr>
             </thead>
             <tbody>
               {items.map((item) => (
                 <tr key={item._id} style={styles.tr}>
-                  <td style={{ ...styles.td, fontWeight: "600", color: "#ffffff" }} className="print-dark-text">
+                  <td style={{ ...styles.td, textAlign: "left", fontWeight: "600" }}>
                     {item.productId?.name || "Deleted Product Item"}
                   </td>
-                  <td style={styles.td}>
-                    {item.productId?.description || "Catalogue entry specifications."}
+                  <td style={{ ...styles.td, textAlign: "left" }}>
+                    {item.brandName || "-"}
                   </td>
-                  <td style={{ ...styles.td, textAlign: "center" }}>{item.quantity}</td>
-                  <td style={{ ...styles.td, textAlign: "right" }}>{formatCurrency(item.unitPrice)}</td>
-                  <td style={{ ...styles.td, textAlign: "right", fontWeight: "600", color: "#ffffff" }} className="print-dark-text">
+                  <td style={{ ...styles.td, textAlign: "center" }}>
+                    {formatSizeWithUnit(item.size, item.billingUnit || item.productId?.unit)}
+                  </td>
+                  <td style={{ ...styles.td, textAlign: "center" }}>
+                    {item.billingQuantity !== undefined ? item.billingQuantity : item.quantity}
+                  </td>
+                  <td style={{ ...styles.td, textAlign: "right" }}>
+                    {formatCurrency(item.unitPrice)}
+                  </td>
+                  <td style={{ ...styles.td, textAlign: "right", fontWeight: "600" }}>
                     {formatCurrency(item.subtotal)}
                   </td>
                 </tr>
@@ -231,32 +278,53 @@ const BillDetail = () => {
           </table>
         </div>
 
-        {/* Balance aggregates */}
-        <div style={styles.totalSection}>
-          <div style={styles.termsNotes}>
-            <h4 style={{ ...styles.addressTitle, marginBottom: "8px" }}>Terms & Notes</h4>
-            <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", lineHeight: "1.4" }}>
-              Please remit payments by the specified due date. Late balances will accumulate standard finance interest
-              charges. Thank you for doing business with us!
-            </p>
+        {/* PAYMENT & TOTALS SECTION */}
+        <div style={styles.totalsSection}>
+          {/* UPI Payment Box (Left side) */}
+          <div style={styles.paymentBox}>
+            <div style={styles.paymentBoxCard}>
+              {upiId ? (
+                <div style={styles.qrPaymentContainerOnly}>
+                  <div style={styles.qrImageWrapperOnly}>
+                    <img 
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(
+                        `upi://pay?pa=${upiId}&pn=${encodeURIComponent(bill.userId?.name || "Merchant")}&am=${bill.total}&cu=INR`
+                      )}`} 
+                      alt="UPI QR Code" 
+                      style={styles.qrCodeImageOnly} 
+                    />
+                  </div>
+                </div>
+              ) : (
+                <span style={styles.paymentBoxPlaceholder}>UPI ID not configured. Configure in profile settings.</span>
+              )}
+            </div>
           </div>
 
-          <div style={styles.totalBlock}>
-            <div style={styles.totalRow}>
-              <span style={styles.totalLabel}>Subtotal:</span>
-              <span style={styles.totalVal}>{formatCurrency(bill.total)}</span>
+          {/* Shaded Totals Container (Right side) */}
+          <div style={styles.totalsContainer}>
+            <div style={styles.totalsRow}>
+              <span style={styles.totalsLabel}>Total Items</span>
+              <span style={styles.totalsValue}>{items.length}</span>
             </div>
-            <div style={styles.totalRow}>
-              <span style={styles.totalLabel}>Taxes & VAT (0%):</span>
-              <span style={styles.totalVal}>$0.00</span>
+            <div style={styles.totalsRow}>
+              <span style={styles.totalsLabel}>Total Quantity</span>
+              <span style={styles.totalsValue}>{totalQtySum}</span>
             </div>
-            <div style={{ ...styles.divider, margin: "12px 0" }}></div>
-            <div style={styles.totalRow}>
-              <span style={{ ...styles.totalLabel, fontSize: "1.1rem", color: "#ffffff" }} className="print-dark-text">Total Due:</span>
-              <span style={styles.grandValue}>{formatCurrency(bill.total)}</span>
+            <div style={styles.totalsDivider}></div>
+            <div style={styles.totalsRow}>
+              <span style={{ ...styles.totalsLabel, fontWeight: "700" }}>Total Due</span>
+              <span style={styles.grandTotalValue}>{formatCurrency(bill.total)}</span>
             </div>
           </div>
         </div>
+
+        {/* NOTES SECTION */}
+        <div style={styles.notesSection}>
+          <span style={styles.notesLabel}>NOTES</span>
+          <p style={styles.notesText}>Thank you for your business!</p>
+        </div>
+
       </div>
     </div>
   );
@@ -287,164 +355,241 @@ const styles = {
   },
   sheet: {
     padding: "50px",
-    background: "rgba(15, 21, 36, 0.7)",
+    background: "#ffffff",
+    color: "#1e293b",
+    display: "flex",
+    flexDirection: "column",
+    gap: "35px",
+    borderRadius: "12px",
+    boxShadow: "0 10px 25px -5px rgba(0,0,0,0.15)",
+    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+    maxWidth: "850px",
+    margin: "0 auto",
   },
-  sheetHeader: {
+  headerRow: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    gap: "20px",
-  },
-  brandRow: {
-    display: "flex",
-    alignItems: "center",
-    gap: "10px",
-    marginBottom: "16px",
-  },
-  logoIcon: {
-    fontSize: "1.4rem",
-    background: "rgba(59, 130, 246, 0.15)",
-    width: "36px",
-    height: "36px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: "8px",
-    color: "var(--accent-blue)",
-  },
-  logoText: {
-    fontSize: "1.25rem",
-    fontWeight: "800",
-    color: "#ffffff",
-  },
-  issuerText: {
-    fontSize: "0.95rem",
-    fontWeight: "600",
-    color: "#ffffff",
-  },
-  issuerSubText: {
-    fontSize: "0.85rem",
-    color: "var(--text-muted)",
-  },
-  billNumber: {
-    fontSize: "1.8rem",
-    fontWeight: "800",
-    color: "var(--accent-blue)",
-  },
-  divider: {
-    height: "1px",
-    background: "var(--glass-border)",
     width: "100%",
-    margin: "30px 0",
   },
-  addressSection: {
-    display: "flex",
-    justifyContent: "space-between",
-    gap: "40px",
-    flexWrap: "wrap",
+  logoImage: {
+    maxHeight: "65px",
+    maxWidth: "200px",
+    objectFit: "contain",
+    marginBottom: "4px",
+    display: "block",
   },
-  addressCard: {
-    flex: 1,
-    minWidth: "220px",
+  invoiceTitle: {
+    fontSize: "2.25rem",
+    fontWeight: "800",
+    color: "#0f172a",
+    margin: 0,
+    letterSpacing: "-0.5px",
   },
-  metaCard: {
-    width: "260px",
-    background: "rgba(255, 255, 255, 0.02)",
-    border: "1px solid var(--glass-border)",
-    borderRadius: "var(--border-radius-md)",
-    padding: "20px",
+  invoiceNumber: {
+    fontSize: "0.875rem",
+    color: "#64748b",
+    fontWeight: "600",
+    marginTop: "2px",
+    display: "block",
+  },
+  datesContainer: {
     display: "flex",
     flexDirection: "column",
     gap: "12px",
+    textAlign: "right",
   },
-  addressTitle: {
-    fontSize: "0.85rem",
-    fontWeight: "600",
-    color: "var(--text-muted)",
-    textTransform: "uppercase",
-    letterSpacing: "0.5px",
-    marginBottom: "12px",
-  },
-  clientName: {
-    fontSize: "1.1rem",
-    fontWeight: "700",
-    color: "#ffffff",
-    marginBottom: "6px",
-  },
-  addressLine: {
-    fontSize: "0.9rem",
-    color: "var(--text-secondary)",
-    marginBottom: "4px",
-  },
-  metaRow: {
+  dateBlock: {
     display: "flex",
-    justifyContent: "space-between",
-    fontSize: "0.9rem",
+    flexDirection: "column",
   },
   metaLabel: {
-    color: "var(--text-secondary)",
+    fontSize: "0.68rem",
+    fontWeight: "800",
+    color: "#64748b",
+    letterSpacing: "1px",
   },
-  metaVal: {
-    color: "#ffffff",
+  metaValue: {
+    fontSize: "0.875rem",
     fontWeight: "600",
+    color: "#334155",
+    marginTop: "2px",
+  },
+  divider: {
+    height: "1px",
+    background: "#e2e8f0",
+    width: "100%",
+    margin: "5px 0",
+  },
+  addressesRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    width: "100%",
+  },
+  addressBlock: {
+    flex: 1,
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: "3px",
+  },
+  addressLabel: {
+    fontSize: "0.68rem",
+    fontWeight: "800",
+    color: "#64748b",
+    letterSpacing: "1.2px",
+    marginBottom: "6px",
+    display: "block",
+  },
+  addressName: {
+    fontSize: "1rem",
+    fontWeight: "700",
+    color: "#0f172a",
+    margin: "0 0 2px 0",
+  },
+  addressSubtext: {
+    fontSize: "0.85rem",
+    color: "#64748b",
+    margin: 0,
+    lineHeight: "1.4",
+  },
+  tableContainer: {
+    width: "100%",
+    marginTop: "10px",
   },
   table: {
     width: "100%",
     borderCollapse: "collapse",
-    textAlign: "left",
   },
   tableHeaderRow: {
-    borderBottom: "2px solid var(--glass-border)",
+    borderBottom: "1px solid #cbd5e1",
   },
   th: {
-    padding: "12px 16px",
-    fontSize: "0.8rem",
-    fontWeight: "600",
-    color: "var(--text-muted)",
-    textTransform: "uppercase",
-    letterSpacing: "0.5px",
+    padding: "8px 0 12px 0",
+    fontSize: "0.68rem",
+    fontWeight: "800",
+    color: "#64748b",
+    letterSpacing: "1.2px",
   },
   tr: {
-    borderBottom: "1px solid var(--glass-border)",
+    borderBottom: "1px solid #f1f5f9",
   },
   td: {
-    padding: "16px",
-    fontSize: "0.95rem",
-    color: "var(--text-secondary)",
+    padding: "16px 0",
+    fontSize: "0.875rem",
+    color: "#334155",
   },
-  totalSection: {
+  totalsSection: {
     display: "flex",
     justifyContent: "space-between",
-    gap: "40px",
-    marginTop: "40px",
-    flexWrap: "wrap-reverse",
+    gap: "30px",
+    alignItems: "flex-start",
+    width: "100%",
+    marginTop: "10px",
   },
-  termsNotes: {
-    flex: 1.2,
-    minWidth: "250px",
+  paymentBox: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
+    width: "45%",
   },
-  totalBlock: {
-    width: "280px",
+  paymentBoxLabel: {
+    fontSize: "0.68rem",
+    fontWeight: "800",
+    color: "#64748b",
+    letterSpacing: "1.2px",
+  },
+  paymentBoxCard: {
+    background: "#f1f5f9",
+    borderRadius: "8px",
+    padding: "16px",
+    display: "flex",
+    alignItems: "center",
+  },
+  paymentBoxValue: {
+    fontSize: "0.9rem",
+    fontWeight: "700",
+    color: "#0f172a",
+    fontFamily: "monospace",
+    wordBreak: "break-all",
+  },
+  paymentBoxPlaceholder: {
+    fontSize: "0.8rem",
+    color: "#94a3b8",
+    fontStyle: "italic",
+  },
+  qrPaymentContainerOnly: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "100%",
+  },
+  qrImageWrapperOnly: {
+    background: "#ffffff",
+    padding: "6px",
+    borderRadius: "8px",
+    border: "1px solid #cbd5e1",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "132px",
+    height: "132px",
+  },
+  qrCodeImageOnly: {
+    width: "120px",
+    height: "120px",
+    display: "block",
+  },
+  totalsContainer: {
+    background: "#f8fafc",
+    borderRadius: "8px",
+    padding: "18px 20px",
+    width: "45%",
     display: "flex",
     flexDirection: "column",
     gap: "10px",
   },
-  totalRow: {
+  totalsRow: {
     display: "flex",
     justifyContent: "space-between",
-    fontSize: "0.95rem",
+    alignItems: "center",
+    fontSize: "0.875rem",
   },
-  totalLabel: {
-    color: "var(--text-secondary)",
+  totalsLabel: {
+    color: "#64748b",
+    fontWeight: "500",
   },
-  totalVal: {
-    color: "#ffffff",
+  totalsValue: {
+    color: "#334155",
     fontWeight: "600",
   },
-  grandValue: {
-    fontSize: "1.4rem",
+  totalsDivider: {
+    height: "1px",
+    background: "#cbd5e1",
+    margin: "4px 0",
+  },
+  grandTotalValue: {
+    fontSize: "1.15rem",
     fontWeight: "800",
-    color: "var(--accent-emerald)",
+    color: "#2563eb",
+  },
+  notesSection: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "4px",
+    marginTop: "10px",
+  },
+  notesLabel: {
+    fontSize: "0.68rem",
+    fontWeight: "800",
+    color: "#64748b",
+    letterSpacing: "1.2px",
+  },
+  notesText: {
+    fontSize: "0.875rem",
+    color: "#64748b",
+    margin: 0,
   },
   centerContainer: {
     display: "flex",
@@ -469,9 +614,13 @@ if (typeof document !== "undefined") {
   styleSheet.type = "text/css";
   styleSheet.innerText = `
     @media print {
+      @page {
+        margin: 0;
+      }
       body {
         background: #ffffff !important;
-        color: #000000 !important;
+        color: #1e293b !important;
+        padding: 1.6cm !important;
       }
       .no-print {
         display: none !important;
@@ -484,22 +633,18 @@ if (typeof document !== "undefined") {
         padding: 0 !important;
         width: 100% !important;
       }
-      .invoice-sheet {
+      .invoice-sheet-modern {
         background: #ffffff !important;
         border: none !important;
         box-shadow: none !important;
         padding: 0 !important;
-        color: #000000 !important;
+        color: #1e293b !important;
+        margin: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
       }
       .print-page-container {
         padding: 0 !important;
-      }
-      .print-dark-text {
-        color: #000000 !important;
-      }
-      td, th {
-        color: #000000 !important;
-        border-bottom-color: #dddddd !important;
       }
     }
   `;

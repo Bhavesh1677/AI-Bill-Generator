@@ -2,6 +2,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { User } from "../models/user.model.js";
+import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import jwt from "jsonwebtoken";
 
 const generateAccessAndRefereshTokens = async (userId) => {
@@ -172,10 +173,59 @@ const getCurrentUser = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, req.user, "Current user fetched successfully"));
 });
 
+const updateProfile = asyncHandler(async (req, res) => {
+  const { name, email, businessName, phone, address, upiId } = req.body;
+
+  if (!name || !email) {
+    throw new ApiError(400, "Name and email are required");
+  }
+
+  // Find user in db
+  const user = await User.findById(req.user._id);
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  // If email is being changed, verify uniqueness
+  const trimmedEmail = email.trim().toLowerCase();
+  if (trimmedEmail !== user.email) {
+    const existingUser = await User.findOne({ email: trimmedEmail });
+    if (existingUser) {
+      throw new ApiError(409, "User with this email already exists");
+    }
+    user.email = trimmedEmail;
+  }
+
+  // Handle logo upload if provided
+  if (req.file) {
+    const logoLocalPath = req.file.path;
+    const uploadedLogo = await uploadOnCloudinary(logoLocalPath);
+    if (!uploadedLogo) {
+      throw new ApiError(500, "Error while uploading logo to Cloudinary");
+    }
+    user.businessLogo = uploadedLogo.url;
+  }
+
+  user.name = name.trim();
+  user.businessName = (businessName || "").trim();
+  user.phone = (phone || "").trim();
+  user.address = (address || "").trim();
+  user.upiId = (upiId || "").trim();
+
+  await user.save({ validateBeforeSave: false });
+
+  const updatedUser = await User.findById(user._id).select("-password -refreshToken");
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, updatedUser, "Profile updated successfully"));
+});
+
 export {
   registerUser,
   loginUser,
   logoutUser,
   refreshAccessToken,
   getCurrentUser,
+  updateProfile,
 };

@@ -4,15 +4,16 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { Client } from "../models/client.model.js";
 
 const createClient = asyncHandler(async (req, res) => {
-  const { name, email, phone, address } = req.body;
+  const { name, businessName, email, phone, address } = req.body;
 
-  if (!name || !email) {
-    throw new ApiError(400, "Name and email are required");
+  if (!name) {
+    throw new ApiError(400, "Name is required");
   }
 
   const client = await Client.create({
     name,
-    email: email.trim().toLowerCase(),
+    businessName,
+    email: email ? email.trim().toLowerCase() : undefined,
     phone,
     address,
     userId: req.user._id,
@@ -47,7 +48,7 @@ const getClientById = asyncHandler(async (req, res) => {
 
 const updateClient = asyncHandler(async (req, res) => {
   const { clientId } = req.params;
-  const { name, email, phone, address } = req.body;
+  const { name, businessName, email, phone, address } = req.body;
 
   const client = await Client.findOne({ _id: clientId, userId: req.user._id });
 
@@ -56,7 +57,8 @@ const updateClient = asyncHandler(async (req, res) => {
   }
 
   if (name) client.name = name;
-  if (email) client.email = email.trim().toLowerCase();
+  if (businessName !== undefined) client.businessName = businessName;
+  if (email !== undefined) client.email = email ? email.trim().toLowerCase() : undefined;
   if (phone !== undefined) client.phone = phone;
   if (address !== undefined) client.address = address;
 

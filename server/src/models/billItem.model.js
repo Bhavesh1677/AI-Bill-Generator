@@ -15,11 +15,26 @@ const billItemSchema = new Schema(
     quantity: {
       type: Number,
       required: true,
-      min: [1, "Quantity must be at least 1"],
-      validate: {
-        validator: Number.isInteger,
-        message: "Quantity must be an integer",
-      },
+      min: [0.001, "Quantity must be at least 0.001"],
+    },
+    billingUnit: {
+      type: String,
+      enum: ["pieces", "kg", "g", "litre", "ml"],
+      trim: true,
+    },
+    brandName: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    size: {
+      type: Number,
+      required: true,
+      default: 1,
+    },
+    billingQuantity: {
+      type: Number,
+      min: [0.001, "Billing quantity must be at least 0.001"],
     },
     unitPrice: {
       type: Number,

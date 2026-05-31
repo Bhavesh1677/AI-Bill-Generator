@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import API from "../utils/api";
-import { FiPlus, FiEdit2, FiTrash2, FiTag, FiDollarSign, FiLayers, FiX } from "react-icons/fi";
+import { FiPlus, FiEdit2, FiTrash2, FiTag, FiLayers, FiX } from "react-icons/fi";
+import { FaRupeeSign } from "react-icons/fa";
 
 const Products = () => {
   const [products, setProducts] = useState([]);
@@ -10,7 +11,7 @@ const Products = () => {
   // Modal states
   const [showModal, setShowModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
-  const [formData, setFormData] = useState({ name: "", description: "", price: "", unit: "pcs" });
+  const [formData, setFormData] = useState({ name: "", brandName: "", size: "1", price: "", unit: "pieces" });
   const [formError, setFormError] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -33,7 +34,7 @@ const Products = () => {
 
   const handleOpenAddModal = () => {
     setEditingProduct(null);
-    setFormData({ name: "", description: "", price: "", unit: "pcs" });
+    setFormData({ name: "", brandName: "", size: "1", price: "", unit: "pieces" });
     setFormError("");
     setShowModal(true);
   };
@@ -42,9 +43,10 @@ const Products = () => {
     setEditingProduct(product);
     setFormData({
       name: product.name,
-      description: product.description || "",
+      brandName: product.brandName || "",
+      size: product.size !== undefined ? product.size.toString() : "1",
       price: product.price,
-      unit: product.unit || "pcs",
+      unit: product.unit || "pieces",
     });
     setFormError("");
     setShowModal(true);
@@ -62,8 +64,8 @@ const Products = () => {
 
   const handleFormSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.name || !formData.price) {
-      setFormError("Name and Price are required fields.");
+    if (!formData.name || !formData.price || !formData.size) {
+      setFormError("Name, Price, and Size are required fields.");
       return;
     }
 
@@ -72,11 +74,20 @@ const Products = () => {
       return;
     }
 
+    if (isNaN(formData.size) || parseFloat(formData.size) <= 0) {
+      setFormError("Size must be a valid positive number.");
+      return;
+    }
+
     setFormError("");
     setSaving(true);
 
     try {
-      const parsedData = { ...formData, price: parseFloat(formData.price) };
+      const parsedData = { 
+        ...formData, 
+        price: parseFloat(formData.price),
+        size: parseFloat(formData.size)
+      };
       if (editingProduct) {
         // Edit Product
         const res = await API.patch(`/products/${editingProduct._id}`, parsedData);
@@ -111,9 +122,9 @@ const Products = () => {
   };
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat("en-US", {
+    return new Intl.NumberFormat("en-IN", {
       style: "currency",
-      currency: "USD",
+      currency: "INR",
     }).format(amount);
   };
 
@@ -127,7 +138,8 @@ const Products = () => {
   }
 
   return (
-    <div className="animate-fade-in">
+    <>
+      <div className="animate-fade-in">
       <div style={styles.header}>
         <div>
           <h1 style={styles.title}>Product Inventory</h1>
@@ -157,7 +169,7 @@ const Products = () => {
               <div style={styles.cardHeader}>
                 <div style={styles.priceTag}>
                   {formatCurrency(product.price)}
-                  <span style={styles.unitText}>/ {product.unit}</span>
+                  <span style={styles.unitText}>/ {product.size || "1"} {product.unit}</span>
                 </div>
                 <div style={styles.actions}>
                   <button style={styles.iconBtn} onClick={() => handleOpenEditModal(product)} title="Edit Product">
@@ -171,21 +183,27 @@ const Products = () => {
 
               <div style={{ marginTop: "8px" }}>
                 <h3 style={styles.cardName}>{product.name}</h3>
-                <p style={styles.cardDesc}>
-                  {product.description || "No description provided for this product catalogue entry."}
-                </p>
+                {product.brandName && (
+                  <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginTop: "-4px", marginBottom: "4px" }}>
+                    Brand: {product.brandName}
+                  </p>
+                )}
+                {product.description && (
+                  <p style={styles.cardDesc}>{product.description}</p>
+                )}
               </div>
 
               <div style={styles.badgeRow}>
                 <div style={styles.badge}>
                   <FiTag size={12} />
-                  <span>{product.unit}</span>
+                  <span>Pack Size: {product.size || "1"} {product.unit || "pieces"}</span>
                 </div>
               </div>
             </div>
           ))}
         </div>
       )}
+    </div>
 
       {/* Modal Dialog */}
       {showModal && (
@@ -214,23 +232,24 @@ const Products = () => {
                 />
               </div>
 
-              <div className="form-group">
-                <label htmlFor="description">Description</label>
-                <textarea
-                  id="description"
-                  className="form-input"
-                  style={{ minHeight: "80px", resize: "vertical" }}
-                  placeholder="Enter short details explaining the line item..."
-                  value={formData.description}
-                  onChange={handleInputChange}
-                />
-              </div>
 
               <div style={styles.twoColumn}>
                 <div className="form-group" style={{ flex: 1 }}>
-                  <label htmlFor="price">Unit Price (USD) *</label>
+                  <label htmlFor="brandName">Product Brand Name</label>
+                  <input
+                    type="text"
+                    id="brandName"
+                    className="form-input"
+                    placeholder="e.g. Parimal or Sawastik"
+                    value={formData.brandName}
+                    onChange={handleInputChange}
+                  />
+                </div>
+
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label htmlFor="price">Unit Price (INR) *</label>
                   <div style={styles.inputWithPrefix}>
-                    <FiDollarSign size={14} style={styles.prefixIcon} />
+                    <FaRupeeSign size={12} style={styles.prefixIcon} />
                     <input
                       type="number"
                       id="price"
@@ -244,6 +263,23 @@ const Products = () => {
                     />
                   </div>
                 </div>
+              </div>
+
+              <div style={styles.twoColumn}>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label htmlFor="size">Product Size *</label>
+                  <input
+                    type="number"
+                    step="any"
+                    min="0.001"
+                    id="size"
+                    className="form-input"
+                    placeholder="e.g. 30, 1, 5"
+                    value={formData.size}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
 
                 <div className="form-group" style={{ flex: 1 }}>
                   <label htmlFor="unit">Unit Metric *</label>
@@ -254,12 +290,11 @@ const Products = () => {
                     onChange={handleInputChange}
                     required
                   >
-                    <option value="pcs">Pieces (pcs)</option>
-                    <option value="hrs">Hours (hrs)</option>
-                    <option value="days">Days (days)</option>
-                    <option value="kg">Kilograms (kg)</option>
-                    <option value="box">Boxes (box)</option>
-                    <option value="service">Flat Service (service)</option>
+                    <option value="pieces">pieces</option>
+                    <option value="kg">kg</option>
+                    <option value="g">g</option>
+                    <option value="litre">litre</option>
+                    <option value="ml">ml</option>
                   </select>
                 </div>
               </div>
@@ -276,7 +311,7 @@ const Products = () => {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 };
 
@@ -407,17 +442,16 @@ const styles = {
     bottom: 0,
     background: "rgba(8, 12, 20, 0.8)",
     backdropFilter: "blur(8px)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
     zIndex: 200,
-    padding: "20px",
+    padding: "40px 20px",
+    overflowY: "auto",
   },
   modalContainer: {
     width: "100%",
     maxWidth: "500px",
     padding: "30px",
     position: "relative",
+    margin: "0 auto",
   },
   modalHeader: {
     display: "flex",

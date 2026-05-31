@@ -4,7 +4,7 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { Product } from "../models/product.model.js";
 
 const createProduct = asyncHandler(async (req, res) => {
-  const { name, description, price, unit } = req.body;
+  const { name, brandName, price, unit, size } = req.body;
 
   if (!name || price === undefined) {
     throw new ApiError(400, "Name and price are required");
@@ -16,9 +16,10 @@ const createProduct = asyncHandler(async (req, res) => {
 
   const product = await Product.create({
     name,
-    description,
+    brandName,
+    size: size !== undefined ? Number(size) : 1,
     price,
-    unit: unit || "pcs",
+    unit: unit || "pieces",
     userId: req.user._id,
   });
 
@@ -51,7 +52,7 @@ const getProductById = asyncHandler(async (req, res) => {
 
 const updateProduct = asyncHandler(async (req, res) => {
   const { productId } = req.params;
-  const { name, description, price, unit } = req.body;
+  const { name, brandName, price, unit, size } = req.body;
 
   const product = await Product.findOne({ _id: productId, userId: req.user._id });
 
@@ -60,7 +61,8 @@ const updateProduct = asyncHandler(async (req, res) => {
   }
 
   if (name) product.name = name;
-  if (description !== undefined) product.description = description;
+  if (brandName !== undefined) product.brandName = brandName;
+  if (size !== undefined) product.size = Number(size);
   if (price !== undefined) {
     if (price < 0) {
       throw new ApiError(400, "Price cannot be negative");

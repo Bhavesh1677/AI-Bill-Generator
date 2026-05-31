@@ -19,9 +19,15 @@ const CreateBill = () => {
     return defaultDue.toISOString().split("T")[0];
   });
   const [status, setStatus] = useState("pending");
-  const [items, setItems] = useState([{ productId: "", quantity: 1, _price: 0, _unit: "pcs" }]);
+  const [items, setItems] = useState([{ productId: "", quantity: 1, _price: 0, _unit: "pieces", billingUnit: "pieces", brandName: "", size: "1" }]);
 
   const navigate = useNavigate();
+
+  const parseSizeFactor = (sizeVal) => {
+    if (sizeVal === undefined || sizeVal === null) return 1;
+    const parsed = parseFloat(sizeVal);
+    return isNaN(parsed) ? 1 : parsed;
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -45,7 +51,7 @@ const CreateBill = () => {
   }, []);
 
   const handleAddItemRow = () => {
-    setItems((prev) => [...prev, { productId: "", quantity: 1, _price: 0, _unit: "pcs" }]);
+    setItems((prev) => [...prev, { productId: "", quantity: 1, _price: 0, _unit: "pieces", billingUnit: "pieces", brandName: "", size: "1" }]);
   };
 
   const handleRemoveItemRow = (index) => {
@@ -65,10 +71,16 @@ const CreateBill = () => {
           const productObj = products.find((p) => p._id === value);
           if (productObj) {
             updated._price = productObj.price;
-            updated._unit = productObj.unit || "pcs";
+            updated._unit = productObj.unit || "pieces";
+            updated.billingUnit = productObj.unit || "pieces";
+            updated.brandName = productObj.brandName || "";
+            updated.size = productObj.size || "1";
           } else {
             updated._price = 0;
-            updated._unit = "pcs";
+            updated._unit = "pieces";
+            updated.billingUnit = "pieces";
+            updated.brandName = "";
+            updated.size = "1";
           }
         }
         return updated;
@@ -76,11 +88,25 @@ const CreateBill = () => {
     );
   };
 
+  const getCompatibleUnits = (baseUnit) => {
+    if (baseUnit === "kg" || baseUnit === "g") {
+      return ["kg", "g"];
+    }
+    if (baseUnit === "litre" || baseUnit === "ml") {
+      return ["litre", "ml"];
+    }
+    return [baseUnit || "pieces"];
+  };
+
+  const getItemSubtotal = (item) => {
+    const price = parseFloat(item._price) || 0;
+    const qty = parseFloat(item.quantity) || 0;
+    return qty * price;
+  };
+
   const calculateTotal = () => {
     return items.reduce((sum, item) => {
-      const price = parseFloat(item._price) || 0;
-      const qty = parseInt(item.quantity) || 0;
-      return sum + price * qty;
+      return sum + getItemSubtotal(item);
     }, 0);
   };
 
@@ -108,7 +134,11 @@ const CreateBill = () => {
         status,
         items: filteredItems.map((item) => ({
           productId: item.productId,
-          quantity: parseInt(item.quantity),
+          quantity: parseFloat(item.quantity),
+          billingUnit: item.billingUnit || item._unit,
+          brandName: item.brandName || "",
+          size: item.size || "1",
+          unitPrice: parseFloat(item._price),
         })),
       };
 
@@ -122,9 +152,9 @@ const CreateBill = () => {
   };
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat("en-US", {
+    return new Intl.NumberFormat("en-IN", {
       style: "currency",
-      currency: "USD",
+      currency: "INR",
     }).format(amount);
   };
 
@@ -188,7 +218,7 @@ const CreateBill = () => {
                 <option value="">-- Choose Client --</option>
                 {clients.map((c) => (
                   <option key={c._id} value={c._id}>
-                    {c.name} ({c.email})
+                    {c.businessName ? `${c.businessName} (Contact: ${c.name})` : c.name} {c.email ? `(${c.email})` : ""}
                   </option>
                 ))}
               </select>
@@ -247,65 +277,117 @@ const CreateBill = () => {
               <div style={styles.itemsList}>
                 {items.map((item, idx) => (
                   <div key={idx} style={styles.itemRow}>
-                    <div style={{ flex: 3 }}>
-                      <label style={styles.itemRowLabel}>Product / Service</label>
-                      <select
-                        className="form-input"
-                        value={item.productId}
-                        onChange={(e) => handleItemChange(idx, "productId", e.target.value)}
-                        required
+                    {/* Row 1: Item selection, Brand, and Rate */}
+                    <div style={styles.itemRowGroup}>
+                      <div style={{ flex: 2.5 }}>
+                        <label style={styles.itemRowLabel}>Item</label>
+                        <select
+                          className="form-input"
+                          value={item.productId}
+                          onChange={(e) => handleItemChange(idx, "productId", e.target.value)}
+                          required
+                        >
+                          <option value="">-- Pick Product --</option>
+                          {products.map((p) => (
+                            <option key={p._id} value={p._id}>
+                              {p.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div style={{ flex: 1.5 }}>
+                        <label style={styles.itemRowLabel}>Brand Name</label>
+                        <input
+                          type="text"
+                          className="form-input"
+                          placeholder="Brand"
+                          value={item.brandName || ""}
+                          onChange={(e) => handleItemChange(idx, "brandName", e.target.value)}
+                        />
+                      </div>
+
+                      <div style={{ flex: 1.2 }}>
+                        <label style={styles.itemRowLabel}>Rate (INR)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="any"
+                          className="form-input"
+                          value={item._price}
+                          onChange={(e) => handleItemChange(idx, "_price", e.target.value)}
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    {/* Row 2: Size, Unit, Total Quantity, Amount, and Delete */}
+                    <div style={{ ...styles.itemRowGroup, marginTop: "12px" }}>
+                      <div style={{ flex: 1.0 }}>
+                        <label style={styles.itemRowLabel}>Size</label>
+                        <input
+                          type="number"
+                          step="any"
+                          min="0.001"
+                          className="form-input"
+                          placeholder="Size"
+                          value={item.size || "1"}
+                          onChange={(e) => handleItemChange(idx, "size", e.target.value)}
+                          required
+                        />
+                      </div>
+
+                      <div style={{ flex: 1.2 }}>
+                        <label style={styles.itemRowLabel}>Unit</label>
+                        <select
+                          className="form-input"
+                          value={item.billingUnit || item._unit}
+                          onChange={(e) => handleItemChange(idx, "billingUnit", e.target.value)}
+                          disabled={!item.productId}
+                          required
+                        >
+                          {getCompatibleUnits(item._unit).map((u) => (
+                            <option key={u} value={u}>
+                              {u}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div style={{ flex: 1.0 }}>
+                        <label style={styles.itemRowLabel}>Total Qty</label>
+                        <input
+                          type="number"
+                          min="0.001"
+                          step="any"
+                          className="form-input"
+                          value={item.quantity}
+                          onChange={(e) => handleItemChange(idx, "quantity", e.target.value)}
+                          required
+                        />
+                      </div>
+
+                      <div style={{ flex: 1.5 }}>
+                        <label style={styles.itemRowLabel}>Amount</label>
+                        <input
+                          type="text"
+                          className="form-input"
+                          style={{ color: "var(--accent-blue)", fontWeight: "600" }}
+                          value={formatCurrency(getItemSubtotal(item))}
+                          disabled
+                        />
+                      </div>
+
+                      <button
+                        type="button"
+                        style={styles.deleteRowBtn}
+                        onClick={() => handleRemoveItemRow(idx)}
+                        disabled={items.length === 1}
+                        title="Remove Row"
                       >
-                        <option value="">-- Pick Product --</option>
-                        {products.map((p) => (
-                          <option key={p._id} value={p._id}>
-                            {p.name} ({formatCurrency(p.price)} / {p.unit})
-                          </option>
-                        ))}
-                      </select>
+                        <FiTrash size={14} />
+                      </button>
                     </div>
-
-                    <div style={{ flex: 1, minWidth: "70px" }}>
-                      <label style={styles.itemRowLabel}>Quantity</label>
-                      <input
-                        type="number"
-                        min="1"
-                        className="form-input"
-                        value={item.quantity}
-                        onChange={(e) => handleItemChange(idx, "quantity", e.target.value)}
-                        required
-                      />
-                    </div>
-
-                    <div style={{ flex: 1.2 }}>
-                      <label style={styles.itemRowLabel}>Unit Price</label>
-                      <input
-                        type="text"
-                        className="form-input"
-                        value={formatCurrency(item._price)}
-                        disabled
-                      />
-                    </div>
-
-                    <div style={{ flex: 1.2 }}>
-                      <label style={styles.itemRowLabel}>Subtotal</label>
-                      <input
-                        type="text"
-                        className="form-input"
-                        style={{ color: "var(--accent-blue)", fontWeight: "600" }}
-                        value={formatCurrency(item._price * item.quantity)}
-                        disabled
-                      />
-                    </div>
-
-                    <button
-                      type="button"
-                      style={styles.deleteRowBtn}
-                      onClick={() => handleRemoveItemRow(idx)}
-                      disabled={items.length === 1}
-                      title="Remove Row"
-                    >
-                      <FiTrash size={14} />
-                    </button>
                   </div>
                 ))}
               </div>
@@ -320,7 +402,16 @@ const CreateBill = () => {
               <div style={styles.summaryRow}>
                 <span style={styles.summaryLabel}>Client Recipient</span>
                 <span style={styles.summaryVal}>
-                  {clientId ? clients.find((c) => c._id === clientId)?.name : "Not selected"}
+                  {clientId
+                    ? (() => {
+                        const selectedClient = clients.find((c) => c._id === clientId);
+                        return selectedClient
+                          ? selectedClient.businessName
+                            ? `${selectedClient.businessName} (${selectedClient.name})`
+                            : selectedClient.name
+                          : "Not selected";
+                      })()
+                    : "Not selected"}
                 </span>
               </div>
 
@@ -416,12 +507,18 @@ const styles = {
   },
   itemRow: {
     display: "flex",
+    flexDirection: "column",
     gap: "12px",
-    alignItems: "flex-end",
-    background: "rgba(255, 255, 255, 0.01)",
+    background: "rgba(255, 255, 255, 0.02)",
     border: "1px solid var(--glass-border)",
     padding: "16px",
     borderRadius: "var(--border-radius-md)",
+  },
+  itemRowGroup: {
+    display: "flex",
+    gap: "16px",
+    alignItems: "flex-end",
+    width: "100%",
   },
   itemRowLabel: {
     display: "block",

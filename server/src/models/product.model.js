@@ -7,9 +7,16 @@ const productSchema = new Schema(
       required: true,
       trim: true,
     },
-    description: {
+    brandName: {
       type: String,
       trim: true,
+      default: "",
+    },
+    size: {
+      type: Number,
+      required: true,
+      default: 1,
+      min: [0, "Size cannot be negative"],
     },
     price: {
       type: Number,
@@ -19,7 +26,8 @@ const productSchema = new Schema(
     unit: {
       type: String,
       required: true,
-      default: "pcs",
+      enum: ["pieces", "kg", "g", "litre", "ml"],
+      default: "pieces",
       trim: true,
     },
     userId: {

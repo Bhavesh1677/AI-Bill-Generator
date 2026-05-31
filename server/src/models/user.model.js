@@ -20,6 +20,26 @@ const userSchema = new Schema(
       type: String,
       required: [true, "Password is required"],
     },
+    businessName: {
+      type: String,
+      default: "",
+    },
+    phone: {
+      type: String,
+      default: "",
+    },
+    address: {
+      type: String,
+      default: "",
+    },
+    upiId: {
+      type: String,
+      default: "",
+    },
+    businessLogo: {
+      type: String,
+      default: "",
+    },
     refreshToken: {
       type: String,
     },

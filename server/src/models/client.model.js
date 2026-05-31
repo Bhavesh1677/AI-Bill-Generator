@@ -7,9 +7,12 @@ const clientSchema = new Schema(
       required: true,
       trim: true,
     },
+    businessName: {
+      type: String,
+      trim: true,
+    },
     email: {
       type: String,
-      required: true,
       lowercase: true,
       trim: true,
     },

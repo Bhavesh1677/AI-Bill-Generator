@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import API from "../utils/api";
-import { FiDollarSign, FiFileText, FiUsers, FiClock, FiEye, FiArrowRight } from "react-icons/fi";
+import { FiFileText, FiUsers, FiClock, FiEye, FiArrowRight } from "react-icons/fi";
+import { FaRupeeSign } from "react-icons/fa";
 
 const Dashboard = () => {
   const [bills, setBills] = useState([]);
@@ -44,9 +45,9 @@ const Dashboard = () => {
     .reduce((sum, b) => sum + b.total, 0);
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat("en-US", {
+    return new Intl.NumberFormat("en-IN", {
       style: "currency",
-      currency: "USD",
+      currency: "INR",
     }).format(amount);
   };
 
@@ -101,7 +102,7 @@ const Dashboard = () => {
       <div style={styles.statsGrid}>
         <div className="glass-panel glass-panel-hover" style={styles.statCard}>
           <div style={{ ...styles.iconWrapper, background: "rgba(16, 185, 129, 0.12)", color: "var(--accent-emerald)" }}>
-            <FiDollarSign size={22} />
+            <FaRupeeSign size={20} />
           </div>
           <div>
             <p style={styles.statLabel}>Total Revenue</p>
@@ -123,7 +124,7 @@ const Dashboard = () => {
 
         <div className="glass-panel glass-panel-hover" style={styles.statCard}>
           <div style={{ ...styles.iconWrapper, background: "rgba(239, 68, 68, 0.12)", color: "var(--accent-coral)" }}>
-            <FiDollarSign size={22} />
+            <FaRupeeSign size={20} />
           </div>
           <div>
             <p style={styles.statLabel}>Unpaid Balances</p>

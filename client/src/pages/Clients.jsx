@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import API from "../utils/api";
-import { FiPlus, FiEdit2, FiTrash2, FiMail, FiPhone, FiMapPin, FiX } from "react-icons/fi";
+import { FiPlus, FiEdit2, FiTrash2, FiMail, FiPhone, FiMapPin, FiX, FiUsers } from "react-icons/fi";
 
 const Clients = () => {
   const [clients, setClients] = useState([]);
@@ -10,7 +10,7 @@ const Clients = () => {
   // Modal states
   const [showModal, setShowModal] = useState(false);
   const [editingClient, setEditingClient] = useState(null);
-  const [formData, setFormData] = useState({ name: "", email: "", phone: "", address: "" });
+  const [formData, setFormData] = useState({ name: "", businessName: "", email: "", phone: "", address: "" });
   const [formError, setFormError] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -33,7 +33,7 @@ const Clients = () => {
 
   const handleOpenAddModal = () => {
     setEditingClient(null);
-    setFormData({ name: "", email: "", phone: "", address: "" });
+    setFormData({ name: "", businessName: "", email: "", phone: "", address: "" });
     setFormError("");
     setShowModal(true);
   };
@@ -42,6 +42,7 @@ const Clients = () => {
     setEditingClient(client);
     setFormData({
       name: client.name,
+      businessName: client.businessName || "",
       email: client.email,
       phone: client.phone || "",
       address: client.address || "",
@@ -62,8 +63,8 @@ const Clients = () => {
 
   const handleFormSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.name || !formData.email) {
-      setFormError("Name and Email are required fields.");
+    if (!formData.name) {
+      setFormError("Name is a required field.");
       return;
     }
 
@@ -114,7 +115,8 @@ const Clients = () => {
   }
 
   return (
-    <div className="animate-fade-in">
+    <>
+      <div className="animate-fade-in">
       <div style={styles.header}>
         <div>
           <h1 style={styles.title}>Client Directory</h1>
@@ -143,7 +145,7 @@ const Clients = () => {
             <div key={client._id} className="glass-panel glass-panel-hover" style={styles.card}>
               <div style={styles.cardHeader}>
                 <div style={styles.avatar}>
-                  {client.name.slice(0, 2).toUpperCase()}
+                  {(client.businessName || client.name).slice(0, 2).toUpperCase()}
                 </div>
                 <div style={styles.actions}>
                   <button style={styles.iconBtn} onClick={() => handleOpenEditModal(client)} title="Edit Client">
@@ -155,13 +157,20 @@ const Clients = () => {
                 </div>
               </div>
 
-              <h3 style={styles.cardName}>{client.name}</h3>
+              <h3 style={styles.cardName}>{client.businessName || client.name}</h3>
+              {client.businessName && (
+                <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginTop: "-12px", marginBottom: "4px" }}>
+                  Contact: {client.name}
+                </p>
+              )}
 
               <div style={styles.cardDetails}>
-                <div style={styles.detailRow}>
-                  <FiMail size={14} style={styles.detailIcon} />
-                  <span style={styles.detailText}>{client.email}</span>
-                </div>
+                {client.email && (
+                  <div style={styles.detailRow}>
+                    <FiMail size={14} style={styles.detailIcon} />
+                    <span style={styles.detailText}>{client.email}</span>
+                  </div>
+                )}
                 {client.phone && (
                   <div style={styles.detailRow}>
                     <FiPhone size={14} style={styles.detailIcon} />
@@ -179,6 +188,7 @@ const Clients = () => {
           ))}
         </div>
       )}
+    </div>
 
       {/* Modal Dialog */}
       {showModal && (
@@ -195,12 +205,12 @@ const Clients = () => {
 
             <form onSubmit={handleFormSubmit}>
               <div className="form-group">
-                <label htmlFor="name">Business / Contact Name *</label>
+                <label htmlFor="name">Client Contact Name *</label>
                 <input
                   type="text"
                   id="name"
                   className="form-input"
-                  placeholder="e.g. Acme Corp or Jane Doe"
+                  placeholder="e.g. Jane Doe"
                   value={formData.name}
                   onChange={handleInputChange}
                   required
@@ -208,25 +218,25 @@ const Clients = () => {
               </div>
 
               <div className="form-group">
-                <label htmlFor="email">Email Address *</label>
+                <label htmlFor="businessName">Client Business Name</label>
                 <input
-                  type="email"
-                  id="email"
+                  type="text"
+                  id="businessName"
                   className="form-input"
-                  placeholder="billing@acme.com"
-                  value={formData.email}
+                  placeholder="e.g. Acme Corp"
+                  value={formData.businessName}
                   onChange={handleInputChange}
-                  required
                 />
               </div>
 
+
               <div className="form-group">
-                <label htmlFor="phone">Phone Number</label>
+                <label htmlFor="phone">Mobile Number</label>
                 <input
                   type="text"
                   id="phone"
                   className="form-input"
-                  placeholder="+1 (555) 019-2834"
+                  placeholder="+91 98765 43210"
                   value={formData.phone}
                   onChange={handleInputChange}
                 />
@@ -256,7 +266,7 @@ const Clients = () => {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 };
 
@@ -379,17 +389,16 @@ const styles = {
     bottom: 0,
     background: "rgba(8, 12, 20, 0.8)",
     backdropFilter: "blur(8px)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
     zIndex: 200,
-    padding: "20px",
+    padding: "40px 20px",
+    overflowY: "auto",
   },
   modalContainer: {
     width: "100%",
     maxWidth: "480px",
     padding: "30px",
     position: "relative",
+    margin: "0 auto",
   },
   modalHeader: {
     display: "flex",
