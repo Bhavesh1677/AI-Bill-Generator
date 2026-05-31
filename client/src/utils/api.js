@@ -1,7 +1,9 @@
 import axios from "axios";
 
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
+
 const API = axios.create({
-  baseURL: "http://localhost:8000/api/v1",
+  baseURL: API_BASE,
   withCredentials: true, // required to send cookies to backend
 });
 
@@ -31,7 +33,7 @@ API.interceptors.response.use(
       try {
         // Attempt to refresh the access token
         const res = await axios.post(
-          "http://localhost:8000/api/v1/users/refresh-token",
+          `${API_BASE}/users/refresh-token`,
           {},
           { withCredentials: true }
         );
