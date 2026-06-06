@@ -102,7 +102,7 @@ const Sidebar = () => {
     <>
       <aside style={styles.sidebar}>
         <div style={styles.logoContainer}>
-          <div style={styles.logoIcon}>⚡</div>
+          <img src="/logo.png" alt="Logo" style={styles.logoIcon} />
           <h2 style={styles.logoText}>Antigravity Bill</h2>
         </div>
 
@@ -445,16 +445,9 @@ const styles = {
     padding: "0 8px",
   },
   logoIcon: {
-    fontSize: "1.5rem",
-    background: "rgba(59, 130, 246, 0.15)",
     width: "38px",
     height: "38px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: "10px",
-    color: "var(--accent-blue)",
-    boxShadow: "0 0 10px rgba(59, 130, 246, 0.2)",
+    objectFit: "contain",
   },
   logoText: {
     fontSize: "1.2rem",
