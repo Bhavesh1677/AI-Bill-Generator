@@ -29,17 +29,26 @@ API.interceptors.response.use(
     
     // If token expired (401) and we haven't retried yet
     if (error.response?.status === 401 && !originalRequest._retry) {
+      // Avoid retrying if the request itself was the refresh-token endpoint
+      if (originalRequest.url?.includes("/users/refresh-token")) {
+        return Promise.reject(error);
+      }
+
       originalRequest._retry = true;
       try {
+        const refreshToken = localStorage.getItem("refreshToken");
         // Attempt to refresh the access token
         const res = await axios.post(
           `${API_BASE}/users/refresh-token`,
-          {},
+          { refreshToken },
           { withCredentials: true }
         );
         
-        const { accessToken } = res.data.data;
+        const { accessToken, refreshToken: newRefreshToken } = res.data.data;
         localStorage.setItem("accessToken", accessToken);
+        if (newRefreshToken) {
+          localStorage.setItem("refreshToken", newRefreshToken);
+        }
         
         // Retry the original request with the new token
         originalRequest.headers.Authorization = `Bearer ${accessToken}`;
@@ -47,6 +56,7 @@ API.interceptors.response.use(
       } catch (refreshError) {
         // Refresh token failed, clear everything and redirect to login if necessary
         localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
         // We can let the context handle logout state
         return Promise.reject(error);
       }

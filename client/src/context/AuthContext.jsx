@@ -11,6 +11,8 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const restoreSession = async () => {
       const storedToken = localStorage.getItem("accessToken");
+      const refreshToken = localStorage.getItem("refreshToken");
+
       if (storedToken) {
         try {
           // Fetch current user details using access token
@@ -18,26 +20,43 @@ export const AuthProvider = ({ children }) => {
           setUser(res.data.data);
         } catch (error) {
           console.log("Failed to fetch user with stored access token, trying silent refresh...");
-          // Try silent refresh using refresh token in HTTPOnly cookies
-          try {
-            const refreshRes = await API.post("/users/refresh-token");
-            const { accessToken, user: loggedUser } = refreshRes.data.data;
-            localStorage.setItem("accessToken", accessToken);
-            setUser(loggedUser);
-          } catch (refreshErr) {
-            console.log("Silent refresh failed as well. Cleaning credentials.");
+          // Try silent refresh using refresh token in localStorage/cookies
+          if (refreshToken) {
+            try {
+              const refreshRes = await API.post("/users/refresh-token", { refreshToken });
+              const { accessToken, refreshToken: newRefreshToken } = refreshRes.data.data;
+              localStorage.setItem("accessToken", accessToken);
+              if (newRefreshToken) {
+                localStorage.setItem("refreshToken", newRefreshToken);
+              }
+              // Fetch user details with the new token
+              const userRes = await API.get("/users/me");
+              setUser(userRes.data.data);
+            } catch (refreshErr) {
+              console.log("Silent refresh failed as well. Cleaning credentials.");
+              localStorage.removeItem("accessToken");
+              localStorage.removeItem("refreshToken");
+            }
+          } else {
+            console.log("No refresh token available. Cleaning credentials.");
             localStorage.removeItem("accessToken");
           }
         }
-      } else {
-        // No token stored, try silent refresh anyway (cookies might still exist)
+      } else if (refreshToken) {
+        // No access token stored but refresh token exists, try silent refresh
         try {
-          const refreshRes = await API.post("/users/refresh-token");
-          const { accessToken, user: loggedUser } = refreshRes.data.data;
+          const refreshRes = await API.post("/users/refresh-token", { refreshToken });
+          const { accessToken, refreshToken: newRefreshToken } = refreshRes.data.data;
           localStorage.setItem("accessToken", accessToken);
-          setUser(loggedUser);
+          if (newRefreshToken) {
+            localStorage.setItem("refreshToken", newRefreshToken);
+          }
+          // Fetch user details with the new token
+          const userRes = await API.get("/users/me");
+          setUser(userRes.data.data);
         } catch (refreshErr) {
-          // Silent refresh failed, stay logged out
+          console.log("Silent refresh failed. Cleaning credentials.");
+          localStorage.removeItem("refreshToken");
         }
       }
       setLoading(false);
@@ -50,13 +69,17 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     try {
       const res = await API.post("/users/login", { email, password });
-      const { accessToken, user: loggedUser } = res.data.data;
+      const { accessToken, refreshToken, user: loggedUser } = res.data.data;
       localStorage.setItem("accessToken", accessToken);
+      if (refreshToken) {
+        localStorage.setItem("refreshToken", refreshToken);
+      }
       setUser(loggedUser);
       return { success: true };
     } catch (error) {
       setUser(null);
       localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
       return {
         success: false,
         message: error.response?.data?.message || "Login failed, please check your credentials.",
@@ -90,6 +113,7 @@ export const AuthProvider = ({ children }) => {
       console.error("Logout request failed:", error);
     } finally {
       localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
       setUser(null);
       setLoading(false);
     }
