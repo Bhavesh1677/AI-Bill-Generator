@@ -24,6 +24,40 @@ const clientSchema = new Schema(
       type: String,
       trim: true,
     },
+    outstandingBalance: {
+      type: Number,
+      default: 0,
+    },
+    creditLimit: {
+      type: Number,
+      default: 5000,
+    },
+    khataHistory: [
+      {
+        date: {
+          type: Date,
+          default: Date.now,
+        },
+        type: {
+          type: String,
+          enum: ["purchase", "payment"],
+          required: true,
+        },
+        amount: {
+          type: Number,
+          required: true,
+        },
+        billId: {
+          type: Schema.Types.ObjectId,
+          ref: "Bill",
+        },
+        remarks: {
+          type: String,
+          trim: true,
+          default: "",
+        },
+      },
+    ],
     userId: {
       type: Schema.Types.ObjectId,
       ref: "User",

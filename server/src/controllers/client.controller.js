@@ -4,7 +4,7 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { Client } from "../models/client.model.js";
 
 const createClient = asyncHandler(async (req, res) => {
-  const { name, businessName, email, phone, address } = req.body;
+  const { name, businessName, email, phone, address, creditLimit } = req.body;
 
   if (!name) {
     throw new ApiError(400, "Name is required");
@@ -16,6 +16,7 @@ const createClient = asyncHandler(async (req, res) => {
     email: email ? email.trim().toLowerCase() : undefined,
     phone,
     address,
+    creditLimit: creditLimit !== undefined ? Number(creditLimit) : 5000,
     userId: req.user._id,
   });
 
@@ -48,7 +49,7 @@ const getClientById = asyncHandler(async (req, res) => {
 
 const updateClient = asyncHandler(async (req, res) => {
   const { clientId } = req.params;
-  const { name, businessName, email, phone, address } = req.body;
+  const { name, businessName, email, phone, address, creditLimit } = req.body;
 
   const client = await Client.findOne({ _id: clientId, userId: req.user._id });
 
@@ -61,6 +62,7 @@ const updateClient = asyncHandler(async (req, res) => {
   if (email !== undefined) client.email = email ? email.trim().toLowerCase() : undefined;
   if (phone !== undefined) client.phone = phone;
   if (address !== undefined) client.address = address;
+  if (creditLimit !== undefined) client.creditLimit = Number(creditLimit);
 
   const updatedClient = await client.save();
 
@@ -83,10 +85,43 @@ const deleteClient = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, {}, "Client deleted successfully"));
 });
 
+const recordKhataPayment = asyncHandler(async (req, res) => {
+  const { clientId } = req.params;
+  const { amount, remarks } = req.body;
+
+  if (amount === undefined || amount <= 0) {
+    throw new ApiError(400, "Payment amount must be greater than zero");
+  }
+
+  const client = await Client.findOne({ _id: clientId, userId: req.user._id });
+
+  if (!client) {
+    throw new ApiError(404, "Customer not found");
+  }
+
+  // Deduct from outstanding balance
+  client.outstandingBalance -= Number(amount);
+
+  // Add ledger entry
+  client.khataHistory.push({
+    type: "payment",
+    amount: Number(amount),
+    remarks: remarks || "Cash payment repayment",
+    date: new Date()
+  });
+
+  await client.save();
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, client, "Payment recorded successfully in customer Khata ledger"));
+});
+
 export {
   createClient,
   getClients,
   getClientById,
   updateClient,
   deleteClient,
+  recordKhataPayment,
 };

@@ -13,6 +13,7 @@ import {
   FiCheckCircle,
   FiAlertCircle,
   FiUploadCloud,
+  FiTruck,
 } from "react-icons/fi";
 
 const Sidebar = () => {
@@ -103,12 +104,12 @@ const Sidebar = () => {
       <aside style={styles.sidebar}>
         <div style={styles.logoContainer}>
           <img src="/logo.png" alt="Logo" style={styles.logoIcon} />
-          <h2 style={styles.logoText}>Antigravity Bill</h2>
+          <h2 style={styles.logoText}>Store POS</h2>
         </div>
 
         <nav style={styles.nav}>
           <NavLink
-            to="/"
+            to="/dashboard"
             style={({ isActive }) => (isActive ? { ...styles.navLink, ...styles.navLinkActive } : styles.navLink)}
           >
             <FiHome size={18} />
@@ -120,7 +121,7 @@ const Sidebar = () => {
             style={({ isActive }) => (isActive ? { ...styles.navLink, ...styles.navLinkActive } : styles.navLink)}
           >
             <FiUsers size={18} />
-            <span>Clients</span>
+            <span>Customers (Khata)</span>
           </NavLink>
 
           <NavLink
@@ -132,11 +133,19 @@ const Sidebar = () => {
           </NavLink>
 
           <NavLink
+            to="/suppliers"
+            style={({ isActive }) => (isActive ? { ...styles.navLink, ...styles.navLinkActive } : styles.navLink)}
+          >
+            <FiTruck size={18} />
+            <span>Suppliers</span>
+          </NavLink>
+
+          <NavLink
             to="/bills"
             style={({ isActive }) => (isActive ? { ...styles.navLink, ...styles.navLinkActive } : styles.navLink)}
           >
             <FiFileText size={18} />
-            <span>Bills</span>
+            <span>POS Orders</span>
           </NavLink>
         </nav>
 
@@ -380,6 +389,7 @@ const Sidebar = () => {
                   disabled={updating}
                 />
               </div>
+
 
               <div>
                 <label className="modal-label">Business Address</label>

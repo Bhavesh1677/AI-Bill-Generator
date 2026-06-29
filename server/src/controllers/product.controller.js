@@ -4,7 +4,7 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { Product } from "../models/product.model.js";
 
 const createProduct = asyncHandler(async (req, res) => {
-  const { name, brandName, price, unit, size } = req.body;
+  const { name, brandName, price, costPrice, stockQuantity, minStockLevel, expiryDate, category, unit, size } = req.body;
 
   if (!name || price === undefined) {
     throw new ApiError(400, "Name and price are required");
@@ -14,11 +14,20 @@ const createProduct = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Price cannot be negative");
   }
 
+  if (costPrice !== undefined && costPrice < 0) {
+    throw new ApiError(400, "Cost price cannot be negative");
+  }
+
   const product = await Product.create({
     name,
     brandName,
     size: size !== undefined ? Number(size) : 1,
     price,
+    costPrice: costPrice !== undefined ? Number(costPrice) : 0,
+    stockQuantity: stockQuantity !== undefined ? Number(stockQuantity) : 0,
+    minStockLevel: minStockLevel !== undefined ? Number(minStockLevel) : 10,
+    expiryDate: expiryDate ? new Date(expiryDate) : null,
+    category: category || "Other",
     unit: unit || "pieces",
     userId: req.user._id,
   });
@@ -52,7 +61,7 @@ const getProductById = asyncHandler(async (req, res) => {
 
 const updateProduct = asyncHandler(async (req, res) => {
   const { productId } = req.params;
-  const { name, brandName, price, unit, size } = req.body;
+  const { name, brandName, price, costPrice, stockQuantity, minStockLevel, expiryDate, category, unit, size } = req.body;
 
   const product = await Product.findOne({ _id: productId, userId: req.user._id });
 
@@ -69,6 +78,28 @@ const updateProduct = asyncHandler(async (req, res) => {
     }
     product.price = price;
   }
+  if (costPrice !== undefined) {
+    if (costPrice < 0) {
+      throw new ApiError(400, "Cost price cannot be negative");
+    }
+    product.costPrice = costPrice;
+  }
+  if (stockQuantity !== undefined) {
+    if (stockQuantity < 0) {
+      throw new ApiError(400, "Stock quantity cannot be negative");
+    }
+    product.stockQuantity = stockQuantity;
+  }
+  if (minStockLevel !== undefined) {
+    if (minStockLevel < 0) {
+      throw new ApiError(400, "Min stock level cannot be negative");
+    }
+    product.minStockLevel = minStockLevel;
+  }
+  if (expiryDate !== undefined) {
+    product.expiryDate = expiryDate ? new Date(expiryDate) : null;
+  }
+  if (category) product.category = category;
   if (unit) product.unit = unit;
 
   const updatedProduct = await product.save();

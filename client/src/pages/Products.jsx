@@ -11,9 +11,33 @@ const Products = () => {
   // Modal states
   const [showModal, setShowModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
-  const [formData, setFormData] = useState({ name: "", brandName: "", size: "1", price: "", unit: "pieces" });
+  const [formData, setFormData] = useState({
+    name: "",
+    brandName: "",
+    size: "1",
+    price: "",
+    costPrice: "0",
+    stockQuantity: "0",
+    minStockLevel: "10",
+    expiryDate: "",
+    category: "Other",
+    unit: "pieces"
+  });
   const [formError, setFormError] = useState("");
   const [saving, setSaving] = useState(false);
+
+  const categories = [
+    "Fruits & Vegetables",
+    "Dairy & Eggs",
+    "Bakery & Bread",
+    "Beverages",
+    "Snacks & Sweets",
+    "Grains & Pulses",
+    "Packaged Food",
+    "Household",
+    "Personal Care",
+    "Other"
+  ];
 
   const fetchProducts = async () => {
     try {
@@ -34,7 +58,18 @@ const Products = () => {
 
   const handleOpenAddModal = () => {
     setEditingProduct(null);
-    setFormData({ name: "", brandName: "", size: "1", price: "", unit: "pieces" });
+    setFormData({
+      name: "",
+      brandName: "",
+      size: "1",
+      price: "",
+      costPrice: "0",
+      stockQuantity: "0",
+      minStockLevel: "10",
+      expiryDate: "",
+      category: "Other",
+      unit: "pieces"
+    });
     setFormError("");
     setShowModal(true);
   };
@@ -46,6 +81,11 @@ const Products = () => {
       brandName: product.brandName || "",
       size: product.size !== undefined ? product.size.toString() : "1",
       price: product.price,
+      costPrice: product.costPrice !== undefined ? product.costPrice.toString() : "0",
+      stockQuantity: product.stockQuantity !== undefined ? product.stockQuantity.toString() : "0",
+      minStockLevel: product.minStockLevel !== undefined ? product.minStockLevel.toString() : "10",
+      expiryDate: product.expiryDate ? product.expiryDate.split("T")[0] : "",
+      category: product.category || "Other",
       unit: product.unit || "pieces",
     });
     setFormError("");
@@ -74,8 +114,13 @@ const Products = () => {
       return;
     }
 
-    if (isNaN(formData.size) || parseFloat(formData.size) <= 0) {
-      setFormError("Size must be a valid positive number.");
+    if (isNaN(formData.costPrice) || parseFloat(formData.costPrice) < 0) {
+      setFormError("Cost price cannot be negative.");
+      return;
+    }
+
+    if (isNaN(formData.stockQuantity) || parseFloat(formData.stockQuantity) < 0) {
+      setFormError("Stock quantity cannot be negative.");
       return;
     }
 
@@ -83,11 +128,15 @@ const Products = () => {
     setSaving(true);
 
     try {
-      const parsedData = { 
-        ...formData, 
+      const parsedData = {
+        ...formData,
         price: parseFloat(formData.price),
+        costPrice: parseFloat(formData.costPrice),
+        stockQuantity: parseFloat(formData.stockQuantity),
+        minStockLevel: parseFloat(formData.minStockLevel),
         size: parseFloat(formData.size)
       };
+
       if (editingProduct) {
         // Edit Product
         const res = await API.patch(`/products/${editingProduct._id}`, parsedData);
@@ -140,77 +189,109 @@ const Products = () => {
   return (
     <>
       <div className="animate-fade-in">
-      <div style={styles.header}>
-        <div>
-          <h1 style={styles.title}>Product Inventory</h1>
-          <p style={styles.subtitle}>Structure catalog entries, specify pricing tiers, and configure standard unit metrics</p>
-        </div>
-        <button className="btn btn-primary" onClick={handleOpenAddModal}>
-          <FiPlus size={16} />
-          <span>Add Product</span>
-        </button>
-      </div>
-
-      {error && <div style={styles.errorAlert}>{error}</div>}
-
-      {products.length === 0 ? (
-        <div className="glass-panel" style={styles.emptyState}>
-          <FiLayers size={48} style={{ color: "var(--text-muted)", marginBottom: "16px" }} />
-          <h3>No Products Registered</h3>
-          <p style={{ color: "var(--text-muted)", marginTop: "4px" }}>Click 'Add Product' to establish inventory pricing indexes.</p>
-          <button className="btn btn-primary" onClick={handleOpenAddModal} style={{ marginTop: "16px" }}>
-            Add Product
+        <div style={styles.header}>
+          <div>
+            <h1 style={styles.title}>Inventory Catalog</h1>
+            <p style={styles.subtitle}>Structure catalog entries, specify cost margins, monitor expiry status, and track levels</p>
+          </div>
+          <button className="btn btn-primary" onClick={handleOpenAddModal}>
+            <FiPlus size={16} />
+            <span>Add Item</span>
           </button>
         </div>
-      ) : (
-        <div style={styles.grid}>
-          {products.map((product) => (
-            <div key={product._id} className="glass-panel glass-panel-hover" style={styles.card}>
-              <div style={styles.cardHeader}>
-                <div style={styles.priceTag}>
-                  {formatCurrency(product.price)}
-                  <span style={styles.unitText}>/ {product.size || "1"} {product.unit}</span>
-                </div>
-                <div style={styles.actions}>
-                  <button style={styles.iconBtn} onClick={() => handleOpenEditModal(product)} title="Edit Product">
-                    <FiEdit2 size={14} />
-                  </button>
-                  <button style={{ ...styles.iconBtn, color: "#f87171" }} onClick={() => handleDeleteProduct(product._id)} title="Delete Product">
-                    <FiTrash2 size={14} />
-                  </button>
-                </div>
-              </div>
 
-              <div style={{ marginTop: "8px" }}>
-                <h3 style={styles.cardName}>{product.name}</h3>
-                {product.brandName && (
-                  <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginTop: "-4px", marginBottom: "4px" }}>
-                    Brand: {product.brandName}
-                  </p>
-                )}
-                {product.description && (
-                  <p style={styles.cardDesc}>{product.description}</p>
-                )}
-              </div>
+        {error && <div style={styles.errorAlert}>{error}</div>}
 
-              <div style={styles.badgeRow}>
-                <div style={styles.badge}>
-                  <FiTag size={12} />
-                  <span>Pack Size: {product.size || "1"} {product.unit || "pieces"}</span>
+        {products.length === 0 ? (
+          <div className="glass-panel" style={styles.emptyState}>
+            <FiLayers size={48} style={{ color: "var(--text-muted)", marginBottom: "16px" }} />
+            <h3>No Products Registered</h3>
+            <p style={{ color: "var(--text-muted)", marginTop: "4px" }}>Click 'Add Item' to establish inventory pricing indexes.</p>
+            <button className="btn btn-primary" onClick={handleOpenAddModal} style={{ marginTop: "16px" }}>
+              Add Item
+            </button>
+          </div>
+        ) : (
+          <div style={styles.grid}>
+            {products.map((product) => {
+              const isLowStock = product.stockQuantity <= product.minStockLevel;
+              const isOutOfStock = product.stockQuantity <= 0;
+              const hasExpired = product.expiryDate && new Date(product.expiryDate) < new Date();
+
+              return (
+                <div key={product._id} className="glass-panel glass-panel-hover" style={styles.card}>
+                  <div style={styles.cardHeader}>
+                    <div style={styles.priceTag}>
+                      {formatCurrency(product.price)}
+                      <span style={styles.unitText}>/ {product.unit}</span>
+                    </div>
+                    <div style={styles.actions}>
+                      <button style={styles.iconBtn} onClick={() => handleOpenEditModal(product)} title="Edit Item">
+                        <FiEdit2 size={14} />
+                      </button>
+                      <button style={{ ...styles.iconBtn, color: "#f87171" }} onClick={() => handleDeleteProduct(product._id)} title="Delete Item">
+                        <FiTrash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div style={{ marginTop: "8px" }}>
+                    <div style={styles.tagRow}>
+                      <span style={styles.categoryTag}>{product.category || "Other"}</span>
+                      {hasExpired && <span style={styles.expiredTag}>Expired</span>}
+                    </div>
+                    <h3 style={styles.cardName}>{product.name}</h3>
+                    <p style={styles.cardBrand}>Brand: {product.brandName || "Generic"}</p>
+                    <div style={styles.detailsList}>
+                      <div style={styles.detailRow}>
+                        <span>Cost price:</span>
+                        <span style={{ color: "#ffffff" }}>{formatCurrency(product.costPrice || 0)}</span>
+                      </div>
+                      <div style={styles.detailRow}>
+                        <span>Current Stock:</span>
+                        <span
+                          style={{
+                            fontWeight: "bold",
+                            color: isOutOfStock
+                              ? "#f87171"
+                              : isLowStock
+                              ? "var(--accent-orange)"
+                              : "var(--accent-emerald)",
+                          }}
+                        >
+                          {product.stockQuantity || 0} {product.unit}
+                        </span>
+                      </div>
+                      {product.expiryDate && (
+                        <div style={styles.detailRow}>
+                          <span>Expiry Date:</span>
+                          <span style={{ color: hasExpired ? "#f87171" : "#ffffff" }}>
+                            {new Date(product.expiryDate).toLocaleDateString()}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div style={styles.badgeRow}>
+                    <div style={styles.badge}>
+                      <FiTag size={12} />
+                      <span>Pack Size: {product.size || "1"} {product.unit || "pieces"}</span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       {/* Modal Dialog */}
       {showModal && (
         <div style={styles.modalOverlay}>
           <div className="glass-panel animate-fade-in" style={styles.modalContainer}>
             <div style={styles.modalHeader}>
-              <h2>{editingProduct ? "Edit Product" : "Add Product"}</h2>
+              <h2>{editingProduct ? "Edit Item" : "Add Grocery Item"}</h2>
               <button style={styles.modalCloseBtn} onClick={handleCloseModal}>
                 <FiX size={20} />
               </button>
@@ -220,34 +301,51 @@ const Products = () => {
 
             <form onSubmit={handleFormSubmit}>
               <div className="form-group">
-                <label htmlFor="name">Product Name *</label>
+                <label htmlFor="name">Item Name *</label>
                 <input
                   type="text"
                   id="name"
                   className="form-input"
-                  placeholder="e.g. Software Consulting or Steel Screws"
+                  placeholder="e.g. Milk, Apples, Biscuits"
                   value={formData.name}
                   onChange={handleInputChange}
                   required
                 />
               </div>
 
-
               <div style={styles.twoColumn}>
                 <div className="form-group" style={{ flex: 1 }}>
-                  <label htmlFor="brandName">Product Brand Name</label>
+                  <label htmlFor="brandName">Brand Name</label>
                   <input
                     type="text"
                     id="brandName"
                     className="form-input"
-                    placeholder="e.g. Parimal or Sawastik"
+                    placeholder="e.g. Britannia, Nestle"
                     value={formData.brandName}
                     onChange={handleInputChange}
                   />
                 </div>
 
                 <div className="form-group" style={{ flex: 1 }}>
-                  <label htmlFor="price">Unit Price (INR) *</label>
+                  <label htmlFor="category">Category</label>
+                  <select
+                    id="category"
+                    className="form-input"
+                    value={formData.category}
+                    onChange={handleInputChange}
+                  >
+                    {categories.map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div style={styles.twoColumn}>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label htmlFor="price">Selling Price (INR) *</label>
                   <div style={styles.inputWithPrefix}>
                     <FaRupeeSign size={12} style={styles.prefixIcon} />
                     <input
@@ -263,18 +361,63 @@ const Products = () => {
                     />
                   </div>
                 </div>
+
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label htmlFor="costPrice">Cost Price (INR)</label>
+                  <div style={styles.inputWithPrefix}>
+                    <FaRupeeSign size={12} style={styles.prefixIcon} />
+                    <input
+                      type="number"
+                      id="costPrice"
+                      step="0.01"
+                      className="form-input"
+                      style={{ paddingLeft: "32px" }}
+                      placeholder="0.00"
+                      value={formData.costPrice}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                </div>
               </div>
 
               <div style={styles.twoColumn}>
                 <div className="form-group" style={{ flex: 1 }}>
-                  <label htmlFor="size">Product Size *</label>
+                  <label htmlFor="stockQuantity">Initial Stock *</label>
+                  <input
+                    type="number"
+                    id="stockQuantity"
+                    className="form-input"
+                    placeholder="e.g. 50"
+                    value={formData.stockQuantity}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
+
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label htmlFor="minStockLevel">Min Stock Alert *</label>
+                  <input
+                    type="number"
+                    id="minStockLevel"
+                    className="form-input"
+                    placeholder="e.g. 10"
+                    value={formData.minStockLevel}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div style={styles.twoColumn}>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label htmlFor="size">Pack Size *</label>
                   <input
                     type="number"
                     step="any"
                     min="0.001"
                     id="size"
                     className="form-input"
-                    placeholder="e.g. 30, 1, 5"
+                    placeholder="e.g. 1, 500"
                     value={formData.size}
                     onChange={handleInputChange}
                     required
@@ -295,8 +438,20 @@ const Products = () => {
                     <option value="g">g</option>
                     <option value="litre">litre</option>
                     <option value="ml">ml</option>
+                    <option value="pack">pack</option>
                   </select>
                 </div>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="expiryDate">Expiry Date</label>
+                <input
+                  type="date"
+                  id="expiryDate"
+                  className="form-input"
+                  value={formData.expiryDate}
+                  onChange={handleInputChange}
+                />
               </div>
 
               <div style={styles.modalActions}>
@@ -304,7 +459,7 @@ const Products = () => {
                   Cancel
                 </button>
                 <button type="submit" className="btn btn-primary" disabled={saving}>
-                  {saving ? "Saving..." : "Save Product"}
+                  {saving ? "Saving..." : "Save Item"}
                 </button>
               </div>
             </form>
@@ -345,7 +500,7 @@ const styles = {
     flexDirection: "column",
     justifyContent: "space-between",
     gap: "16px",
-    minHeight: "200px",
+    minHeight: "240px",
   },
   cardHeader: {
     display: "flex",
@@ -381,24 +536,53 @@ const styles = {
     justifyContent: "center",
     transition: "var(--transition-smooth)",
   },
+  tagRow: {
+    display: "flex",
+    gap: "6px",
+    marginBottom: "6px",
+  },
+  categoryTag: {
+    fontSize: "0.7rem",
+    fontWeight: "600",
+    color: "var(--accent-blue)",
+    background: "rgba(59, 130, 246, 0.1)",
+    padding: "2px 8px",
+    borderRadius: "10px",
+  },
+  expiredTag: {
+    fontSize: "0.7rem",
+    fontWeight: "600",
+    color: "#f87171",
+    background: "rgba(239, 68, 68, 0.1)",
+    padding: "2px 8px",
+    borderRadius: "10px",
+  },
   cardName: {
     fontSize: "1.1rem",
     fontWeight: "700",
     color: "#ffffff",
-    marginBottom: "8px",
+    marginBottom: "4px",
   },
-  cardDesc: {
+  cardBrand: {
+    fontSize: "0.82rem",
+    color: "var(--text-secondary)",
+    marginTop: "0",
+    marginBottom: "12px",
+  },
+  detailsList: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "6px",
+  },
+  detailRow: {
+    display: "flex",
+    justifyContent: "space-between",
     fontSize: "0.85rem",
     color: "var(--text-secondary)",
-    lineHeight: "1.4",
-    display: "-webkit-box",
-    WebkitLineClamp: "3",
-    WebkitBoxOrient: "vertical",
-    overflow: "hidden",
   },
   badgeRow: {
     display: "flex",
-    marginTop: "auto",
+    marginTop: "12px",
   },
   badge: {
     display: "inline-flex",

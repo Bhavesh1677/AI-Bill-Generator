@@ -13,7 +13,7 @@ const parseSizeFactor = (sizeVal) => {
 };
 
 const createBill = asyncHandler(async (req, res) => {
-  const { billNumber, clientId, issueDate, dueDate, status, items } = req.body;
+  const { billNumber, clientId, issueDate, dueDate, status, items, paymentMethod } = req.body;
 
   // 1. Validation
   if (!clientId || !dueDate || !items || !Array.isArray(items) || items.length === 0) {
@@ -33,7 +33,7 @@ const createBill = asyncHandler(async (req, res) => {
     finalBillNumber = `BILL-${(billCount + 1).toString().padStart(4, "0")}`;
   }
 
-  // 3. Process line items
+  // 3. Process line items and update inventory stock
   let total = 0;
   const processedItems = [];
 
@@ -55,6 +55,10 @@ const createBill = asyncHandler(async (req, res) => {
     const subtotal = Number((Number(item.quantity) * rateToUse).toFixed(2));
     total += subtotal;
 
+    // Deduct stock quantity
+    product.stockQuantity = Math.max(0, product.stockQuantity - Number(item.quantity));
+    await product.save();
+
     processedItems.push({
       productId: product._id,
       quantity: Number(item.quantity),
@@ -69,6 +73,16 @@ const createBill = asyncHandler(async (req, res) => {
 
   total = Number(total.toFixed(2));
 
+  // Determine starting bill status based on paymentMethod
+  let finalStatus = status;
+  if (!finalStatus) {
+    if (paymentMethod === "Store Credit") {
+      finalStatus = "unpaid";
+    } else {
+      finalStatus = "paid";
+    }
+  }
+
   // 4. Create the Bill
   const bill = await Bill.create({
     billNumber: finalBillNumber,
@@ -76,11 +90,25 @@ const createBill = asyncHandler(async (req, res) => {
     clientId: client._id,
     issueDate: issueDate || new Date(),
     dueDate,
-    status: status || "pending",
+    status: finalStatus,
     total,
+    paymentMethod: paymentMethod || "Cash",
   });
 
-  // 5. Create the Bill Items related to the bill
+  // 5. Update Khata Outstanding Credit Ledger if applicable
+  if (paymentMethod === "Store Credit") {
+    client.outstandingBalance += total;
+    client.khataHistory.push({
+      type: "purchase",
+      amount: total,
+      billId: bill._id,
+      remarks: `Store credit purchase: Bill #${finalBillNumber}`,
+      date: new Date(),
+    });
+    await client.save();
+  }
+
+  // 6. Create the Bill Items related to the bill
   const itemsWithBillId = processedItems.map((item) => ({
     ...item,
     billId: bill._id,

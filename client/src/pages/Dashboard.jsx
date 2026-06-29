@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import API from "../utils/api";
-import { FiFileText, FiUsers, FiClock, FiEye, FiArrowRight } from "react-icons/fi";
+import { FiFileText, FiUsers, FiClock, FiEye, FiArrowRight, FiBox, FiAlertTriangle } from "react-icons/fi";
 import { FaRupeeSign } from "react-icons/fa";
 
 const Dashboard = () => {
   const [bills, setBills] = useState([]);
-  const [clientCount, setClientCount] = useState(0);
+  const [clients, setClients] = useState([]);
+  const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -14,12 +15,14 @@ const Dashboard = () => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
-        const [billsRes, clientsRes] = await Promise.all([
+        const [billsRes, clientsRes, productsRes] = await Promise.all([
           API.get("/bills"),
           API.get("/clients"),
+          API.get("/products"),
         ]);
         setBills(billsRes.data.data);
-        setClientCount(clientsRes.data.data.length);
+        setClients(clientsRes.data.data);
+        setProducts(productsRes.data.data);
       } catch (err) {
         setError("Failed to load dashboard metrics. Ensure server is running.");
         console.error(err);
@@ -31,18 +34,14 @@ const Dashboard = () => {
     fetchDashboardData();
   }, []);
 
-  // Compute metrics
-  const totalRevenue = bills
+  // Compute grocery metrics
+  const totalSales = bills
     .filter((b) => b.status === "paid")
     .reduce((sum, b) => sum + b.total, 0);
 
-  const pendingRevenue = bills
-    .filter((b) => b.status === "pending")
-    .reduce((sum, b) => sum + b.total, 0);
+  const outstandingKhata = clients.reduce((sum, c) => sum + (c.outstandingBalance || 0), 0);
 
-  const unpaidRevenue = bills
-    .filter((b) => b.status === "unpaid" || b.status === "overdue")
-    .reduce((sum, b) => sum + b.total, 0);
+  const lowStockCount = products.filter((p) => p.stockQuantity <= p.minStockLevel).length;
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat("en-IN", {
@@ -68,7 +67,7 @@ const Dashboard = () => {
     return (
       <div style={styles.centerContainer}>
         <div className="loader"></div>
-        <p style={{ marginTop: "12px", color: "var(--text-secondary)" }}>Analyzing billing datasets...</p>
+        <p style={{ marginTop: "12px", color: "var(--text-secondary)" }}>Aggregating grocery store datasets...</p>
       </div>
     );
   }
@@ -90,11 +89,11 @@ const Dashboard = () => {
     <div className="animate-fade-in">
       <div style={styles.header}>
         <div>
-          <h1 style={styles.title}>Workspace Overview</h1>
-          <p style={styles.subtitle}>Track client portfolios, invoice registries, and general cashflows</p>
+          <h1 style={styles.title}>Store Dashboard</h1>
+          <p style={styles.subtitle}>Overview of active sales, inventory stock levels, and customer credit ledgers</p>
         </div>
         <Link to="/bills/create" className="btn btn-primary">
-          ⚡ Create New Bill
+          ⚡ Open POS Terminal
         </Link>
       </div>
 
@@ -105,31 +104,31 @@ const Dashboard = () => {
             <FaRupeeSign size={20} />
           </div>
           <div>
-            <p style={styles.statLabel}>Total Revenue</p>
-            <h3 style={{ ...styles.statValue, color: "var(--accent-emerald)" }}>{formatCurrency(totalRevenue)}</h3>
-            <p style={styles.statDesc}>Cleared collections</p>
+            <p style={styles.statLabel}>Total Sales</p>
+            <h3 style={{ ...styles.statValue, color: "var(--accent-emerald)" }}>{formatCurrency(totalSales)}</h3>
+            <p style={styles.statDesc}>Successful POS cashouts</p>
           </div>
         </div>
 
         <div className="glass-panel glass-panel-hover" style={styles.statCard}>
-          <div style={{ ...styles.iconWrapper, background: "rgba(245, 158, 11, 0.12)", color: "var(--accent-amber)" }}>
+          <div style={{ ...styles.iconWrapper, background: "rgba(239, 68, 68, 0.12)", color: "#f87171" }}>
             <FiClock size={22} />
           </div>
           <div>
-            <p style={styles.statLabel}>Pending Clearances</p>
-            <h3 style={{ ...styles.statValue, color: "var(--accent-amber)" }}>{formatCurrency(pendingRevenue)}</h3>
-            <p style={styles.statDesc}>Awaiting approvals</p>
+            <p style={styles.statLabel}>Outstanding Credit</p>
+            <h3 style={{ ...styles.statValue, color: "#f87171" }}>{formatCurrency(outstandingKhata)}</h3>
+            <p style={styles.statDesc}>Total customer Khata balance</p>
           </div>
         </div>
 
         <div className="glass-panel glass-panel-hover" style={styles.statCard}>
-          <div style={{ ...styles.iconWrapper, background: "rgba(239, 68, 68, 0.12)", color: "var(--accent-coral)" }}>
-            <FaRupeeSign size={20} />
+          <div style={{ ...styles.iconWrapper, background: "rgba(245, 158, 11, 0.12)", color: "var(--accent-orange)" }}>
+            <FiAlertTriangle size={22} />
           </div>
           <div>
-            <p style={styles.statLabel}>Unpaid Balances</p>
-            <h3 style={{ ...styles.statValue, color: "var(--accent-coral)" }}>{formatCurrency(unpaidRevenue)}</h3>
-            <p style={styles.statDesc}>Outstanding debts</p>
+            <p style={styles.statLabel}>Low Stock Items</p>
+            <h3 style={{ ...styles.statValue, color: "var(--accent-orange)" }}>{lowStockCount}</h3>
+            <p style={styles.statDesc}>Requires restocking</p>
           </div>
         </div>
 
@@ -138,19 +137,19 @@ const Dashboard = () => {
             <FiUsers size={22} />
           </div>
           <div>
-            <p style={styles.statLabel}>Client Registry</p>
-            <h3 style={{ ...styles.statValue, color: "#ffffff" }}>{clientCount}</h3>
-            <p style={styles.statDesc}>Active profiles</p>
+            <p style={styles.statLabel}>Customers</p>
+            <h3 style={{ ...styles.statValue, color: "#ffffff" }}>{clients.length}</h3>
+            <p style={styles.statDesc}>Active Khata profiles</p>
           </div>
         </div>
       </div>
 
-      {/* Recent Invoices Table */}
+      {/* Recent POS Orders Table */}
       <div className="glass-panel" style={styles.tablePanel}>
         <div style={styles.tableHeader}>
-          <h2 style={styles.tableTitle}>Recent Bills</h2>
+          <h2 style={styles.tableTitle}>Recent POS Orders</h2>
           <Link to="/bills" style={styles.tableHeaderLink}>
-            <span>View All</span>
+            <span>View All Transactions</span>
             <FiArrowRight size={14} />
           </Link>
         </div>
@@ -158,10 +157,10 @@ const Dashboard = () => {
         {bills.length === 0 ? (
           <div style={styles.emptyState}>
             <FiFileText size={48} style={{ color: "var(--text-muted)", marginBottom: "16px" }} />
-            <h3>No Bills Registered Yet</h3>
-            <p style={{ color: "var(--text-muted)", marginTop: "4px" }}>Create your first bill to launch cashflow metrics.</p>
+            <h3>No POS Transactions Yet</h3>
+            <p style={{ color: "var(--text-muted)", marginTop: "4px" }}>Start checking out customers to populate transaction summaries.</p>
             <Link to="/bills/create" className="btn btn-primary" style={{ marginTop: "16px" }}>
-              Build Invoices
+              Launch Cashier POS
             </Link>
           </div>
         ) : (
@@ -169,10 +168,10 @@ const Dashboard = () => {
             <table style={styles.table}>
               <thead>
                 <tr>
-                  <th style={styles.th}>Bill Number</th>
-                  <th style={styles.th}>Client</th>
-                  <th style={styles.th}>Issue Date</th>
-                  <th style={styles.th}>Due Date</th>
+                  <th style={styles.th}>Order Number</th>
+                  <th style={styles.th}>Customer</th>
+                  <th style={styles.th}>Date</th>
+                  <th style={styles.th}>Payment Method</th>
                   <th style={styles.th}>Total Amount</th>
                   <th style={styles.th}>Status</th>
                   <th style={styles.th}>Actions</th>
@@ -182,9 +181,13 @@ const Dashboard = () => {
                 {bills.slice(0, 5).map((bill) => (
                   <tr key={bill._id} className="table-row-hover" style={styles.tr}>
                     <td style={{ ...styles.td, fontWeight: "600", color: "#ffffff" }}>{bill.billNumber}</td>
-                    <td style={styles.td}>{bill.clientId?.name || "Deleted Client"}</td>
+                    <td style={styles.td}>{bill.clientId?.name || "Walk-in Customer"}</td>
                     <td style={styles.td}>{new Date(bill.issueDate).toLocaleDateString()}</td>
-                    <td style={styles.td}>{new Date(bill.dueDate).toLocaleDateString()}</td>
+                    <td style={styles.td}>
+                      <span style={{ fontSize: "0.85rem", color: "var(--text-secondary)", fontWeight: "600" }}>
+                        {bill.paymentMethod || "Cash"}
+                      </span>
+                    </td>
                     <td style={{ ...styles.td, fontWeight: "700", color: "var(--accent-blue)" }}>
                       {formatCurrency(bill.total)}
                     </td>
@@ -194,7 +197,7 @@ const Dashboard = () => {
                       </span>
                     </td>
                     <td style={styles.td}>
-                      <Link to={`/bills/${bill._id}`} style={styles.actionBtn} title="View Invoice">
+                      <Link to={`/bills/${bill._id}`} style={styles.actionBtn} title="View Details">
                         <FiEye size={16} />
                       </Link>
                     </td>

@@ -38,6 +38,11 @@ const billSchema = new Schema(
       required: true,
       default: 0,
     },
+    paymentMethod: {
+      type: String,
+      enum: ["Cash", "Card", "UPI", "Store Credit"],
+      default: "Cash",
+    },
   },
   {
     timestamps: true,

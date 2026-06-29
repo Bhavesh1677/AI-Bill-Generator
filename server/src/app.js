@@ -7,6 +7,8 @@ import userRouter from "./routes/user.routes.js";
 import clientRouter from "./routes/client.routes.js";
 import productRouter from "./routes/product.routes.js";
 import billRouter from "./routes/bill.routes.js";
+import supplierRouter from "./routes/supplier.routes.js";
+
 
 const app = express();
 
@@ -35,5 +37,7 @@ app.use("/api/v1/users", userRouter);
 app.use("/api/v1/clients", clientRouter);
 app.use("/api/v1/products", productRouter);
 app.use("/api/v1/bills", billRouter);
+app.use("/api/v1/suppliers", supplierRouter);
+
 
 export { app };

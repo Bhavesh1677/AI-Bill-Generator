@@ -32,7 +32,7 @@ const Signup = () => {
     setSubmitting(false);
 
     if (result.success) {
-      navigate("/");
+      navigate("/dashboard");
     } else {
       setError(result.message);
     }

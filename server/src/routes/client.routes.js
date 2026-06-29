@@ -5,6 +5,7 @@ import {
   getClientById,
   updateClient,
   deleteClient,
+  recordKhataPayment,
 } from "../controllers/client.controller.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 
@@ -19,5 +20,7 @@ router
   .get(getClientById)
   .patch(updateClient)
   .delete(deleteClient);
+
+router.route("/khata-payment/:clientId").post(recordKhataPayment);
 
 export default router;

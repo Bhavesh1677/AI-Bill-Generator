@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import API from "../utils/api";
-import { FiPlus, FiTrash, FiCalendar, FiUser, FiInfo, FiLayers } from "react-icons/fi";
+import { FiPlus, FiTrash, FiUser, FiLayers, FiSearch, FiShoppingCart, FiMinus } from "react-icons/fi";
 
 const CreateBill = () => {
   const [clients, setClients] = useState([]);
@@ -10,24 +10,28 @@ const CreateBill = () => {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  // Form states
-  const [clientId, setClientId] = useState("");
-  const [issueDate, setIssueDate] = useState(() => new Date().toISOString().split("T")[0]);
-  const [dueDate, setDueDate] = useState(() => {
-    const defaultDue = new Date();
-    defaultDue.setDate(defaultDue.getDate() + 15);
-    return defaultDue.toISOString().split("T")[0];
-  });
-  const [status, setStatus] = useState("pending");
-  const [items, setItems] = useState([{ productId: "", quantity: 1, _price: 0, _unit: "pieces", billingUnit: "pieces", brandName: "", size: "1" }]);
+  // POS State
+  const [selectedClientId, setSelectedClientId] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [basket, setBasket] = useState([]);
+  const [paymentMethod, setPaymentMethod] = useState("Cash");
 
   const navigate = useNavigate();
 
-  const parseSizeFactor = (sizeVal) => {
-    if (sizeVal === undefined || sizeVal === null) return 1;
-    const parsed = parseFloat(sizeVal);
-    return isNaN(parsed) ? 1 : parsed;
-  };
+  const categories = [
+    "All",
+    "Fruits & Vegetables",
+    "Dairy & Eggs",
+    "Bakery & Bread",
+    "Beverages",
+    "Snacks & Sweets",
+    "Grains & Pulses",
+    "Packaged Food",
+    "Household",
+    "Personal Care",
+    "Other"
+  ];
 
   useEffect(() => {
     const fetchData = async () => {
@@ -40,7 +44,7 @@ const CreateBill = () => {
         setClients(clientsRes.data.data);
         setProducts(productsRes.data.data);
       } catch (err) {
-        setError("Failed to load clients and products lists for bill creation.");
+        setError("Failed to load clients and products lists for POS checkout.");
         console.error(err);
       } finally {
         setLoading(false);
@@ -50,76 +54,65 @@ const CreateBill = () => {
     fetchData();
   }, []);
 
-  const handleAddItemRow = () => {
-    setItems((prev) => [...prev, { productId: "", quantity: 1, _price: 0, _unit: "pieces", billingUnit: "pieces", brandName: "", size: "1" }]);
-  };
-
-  const handleRemoveItemRow = (index) => {
-    if (items.length === 1) return;
-    setItems((prev) => prev.filter((_, idx) => idx !== index));
-  };
-
-  const handleItemChange = (index, field, value) => {
-    setItems((prev) =>
-      prev.map((item, idx) => {
-        if (idx !== index) return item;
-
-        const updated = { ...item, [field]: value };
-
-        // If product changes, automatically populate pricing and unit from database list
-        if (field === "productId") {
-          const productObj = products.find((p) => p._id === value);
-          if (productObj) {
-            updated._price = productObj.price;
-            updated._unit = productObj.unit || "pieces";
-            updated.billingUnit = productObj.unit || "pieces";
-            updated.brandName = productObj.brandName || "";
-            updated.size = productObj.size || "1";
-          } else {
-            updated._price = 0;
-            updated._unit = "pieces";
-            updated.billingUnit = "pieces";
-            updated.brandName = "";
-            updated.size = "1";
-          }
-        }
-        return updated;
-      })
-    );
-  };
-
-  const getCompatibleUnits = (baseUnit) => {
-    if (baseUnit === "kg" || baseUnit === "g") {
-      return ["kg", "g"];
-    }
-    if (baseUnit === "litre" || baseUnit === "ml") {
-      return ["litre", "ml"];
-    }
-    return [baseUnit || "pieces"];
-  };
-
-  const getItemSubtotal = (item) => {
-    const price = parseFloat(item._price) || 0;
-    const qty = parseFloat(item.quantity) || 0;
-    return qty * price;
-  };
-
-  const calculateTotal = () => {
-    return items.reduce((sum, item) => {
-      return sum + getItemSubtotal(item);
-    }, 0);
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!clientId) {
-      setError("Please select a client.");
+  const handleAddToBasket = (product) => {
+    if (product.stockQuantity <= 0) {
+      setError(`Warning: ${product.name} is out of stock!`);
       return;
     }
 
-    const filteredItems = items.filter((item) => item.productId !== "");
-    if (filteredItems.length === 0) {
-      setError("Please add at least one valid product line item.");
+    setBasket((prev) => {
+      const existing = prev.find((item) => item.product._id === product._id);
+      if (existing) {
+        if (existing.quantity >= product.stockQuantity) {
+          setError(`Warning: Cannot add more than available stock (${product.stockQuantity} units) for ${product.name}.`);
+          return prev;
+        }
+        setError("");
+        return prev.map((item) =>
+          item.product._id === product._id ? { ...item, quantity: item.quantity + 1 } : item
+        );
+      }
+      setError("");
+      return [...prev, { product, quantity: 1 }];
+    });
+  };
+
+  const handleUpdateQuantity = (productId, change) => {
+    setBasket((prev) => {
+      const item = prev.find((i) => i.product._id === productId);
+      if (!item) return prev;
+
+      const newQty = item.quantity + change;
+      if (newQty <= 0) {
+        return prev.filter((i) => i.product._id !== productId);
+      }
+
+      if (newQty > item.product.stockQuantity) {
+        setError(`Warning: Cannot add more than available stock (${item.product.stockQuantity} units) for ${item.product.name}.`);
+        return prev;
+      }
+
+      setError("");
+      return prev.map((i) => (i.product._id === productId ? { ...i, quantity: newQty } : i));
+    });
+  };
+
+  const handleRemoveFromBasket = (productId) => {
+    setBasket((prev) => prev.filter((item) => item.product._id !== productId));
+  };
+
+  const calculateTotal = () => {
+    return basket.reduce((sum, item) => sum + item.quantity * item.product.price, 0);
+  };
+
+  const handleCheckout = async (e) => {
+    e.preventDefault();
+    if (!selectedClientId) {
+      setError("Please select a customer before checking out.");
+      return;
+    }
+    if (basket.length === 0) {
+      setError("Please add at least one item to the basket.");
       return;
     }
 
@@ -127,29 +120,37 @@ const CreateBill = () => {
     setSubmitting(true);
 
     try {
-      const billData = {
-        clientId,
-        issueDate,
-        dueDate,
-        status,
-        items: filteredItems.map((item) => ({
-          productId: item.productId,
-          quantity: parseFloat(item.quantity),
-          billingUnit: item.billingUnit || item._unit,
-          brandName: item.brandName || "",
-          size: item.size || "1",
-          unitPrice: parseFloat(item._price),
+      const checkoutData = {
+        clientId: selectedClientId,
+        paymentMethod,
+        issueDate: new Date().toISOString().split("T")[0],
+        dueDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split("T")[0], // default 15 days
+        items: basket.map((item) => ({
+          productId: item.product._id,
+          quantity: item.quantity,
+          unitPrice: item.product.price,
+          billingUnit: item.product.unit,
+          brandName: item.product.brandName || "",
+          size: item.product.size || "1",
         })),
       };
 
-      const res = await API.post("/bills", billData);
+      const res = await API.post("/bills", checkoutData);
       navigate(`/bills/${res.data.data.bill._id}`);
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to generate bill invoice.");
+      setError(err.response?.data?.message || "Failed to finalize POS checkout.");
     } finally {
       setSubmitting(false);
     }
   };
+
+  const filteredProducts = products.filter((product) => {
+    const matchesSearch =
+      product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (product.brandName && product.brandName.toLowerCase().includes(searchQuery.toLowerCase()));
+    const matchesCategory = selectedCategory === "All" || product.category === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat("en-IN", {
@@ -162,302 +163,255 @@ const CreateBill = () => {
     return (
       <div style={styles.centerContainer}>
         <div className="loader"></div>
-        <p style={{ marginTop: "12px", color: "var(--text-secondary)" }}>Configuring secure invoice templates...</p>
+        <p style={{ marginTop: "12px", color: "var(--text-secondary)" }}>Launching cashier checkout terminal...</p>
       </div>
     );
   }
 
   return (
-    <div className="animate-fade-in">
+    <div className="animate-fade-in" style={styles.posContainer}>
+      {/* Top POS header */}
       <div style={styles.header}>
         <div>
-          <h1 style={styles.title}>Invoice Builder</h1>
-          <p style={styles.subtitle}>Draft new statements, map line structures, and select status parameters</p>
+          <h1 style={styles.title}>Cashier Terminal (POS)</h1>
+          <p style={styles.subtitle}>Select items, manage customer baskets, and process grocery checkouts</p>
         </div>
       </div>
 
       {error && <div style={styles.errorAlert}>{error}</div>}
 
-      {clients.length === 0 ? (
-        <div className="glass-panel" style={styles.emptyState}>
-          <FiUser size={48} style={{ color: "var(--text-muted)", marginBottom: "16px" }} />
-          <h3>No Clients Registered</h3>
-          <p style={{ color: "var(--text-muted)", marginTop: "4px" }}>
-            You must register a client before preparing any invoice.
-          </p>
-          <Link to="/clients" className="btn btn-primary" style={{ marginTop: "16px" }}>
-            Create Client Profile
-          </Link>
-        </div>
-      ) : products.length === 0 ? (
-        <div className="glass-panel" style={styles.emptyState}>
-          <FiLayers size={48} style={{ color: "var(--text-muted)", marginBottom: "16px" }} />
-          <h3>Product Catalog Empty</h3>
-          <p style={{ color: "var(--text-muted)", marginTop: "4px" }}>
-            Create products in the inventory registry before launching builders.
-          </p>
-          <Link to="/products" className="btn btn-primary" style={{ marginTop: "16px" }}>
-            Build Catalog List
-          </Link>
-        </div>
-      ) : (
-        <form onSubmit={handleSubmit} style={styles.formContainer}>
-          {/* Form left */}
-          <div className="glass-panel" style={styles.leftPanel}>
-            <h2 style={styles.panelTitle}>Invoice Details</h2>
+      <div style={styles.mainLayout}>
+        {/* Left Side: Category tabs & product search grid */}
+        <div style={styles.catalogSection}>
+          <div className="glass-panel" style={styles.searchBarWrapper}>
+            <div style={styles.searchInputContainer}>
+              <FiSearch size={18} style={styles.searchIcon} />
+              <input
+                type="text"
+                placeholder="Search products by name or brand..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={styles.searchInput}
+              />
+            </div>
 
+            {/* Category tabs */}
+            <div style={styles.categoryTabs}>
+              {categories.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat)}
+                  style={{
+                    ...styles.categoryTabBtn,
+                    ...(selectedCategory === cat ? styles.activeCategoryTab : {}),
+                  }}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Product Cards Grid */}
+          <div style={styles.productGrid}>
+            {filteredProducts.map((p) => {
+              const inBasket = basket.find((item) => item.product._id === p._id);
+              const isLowStock = p.stockQuantity <= p.minStockLevel;
+              const isOutOfStock = p.stockQuantity <= 0;
+
+              return (
+                <div key={p._id} className="glass-panel" style={styles.productCard}>
+                  <div style={styles.productCardHeader}>
+                    <span style={styles.productCategory}>{p.category || "Other"}</span>
+                    <span
+                      style={{
+                        ...styles.stockBadge,
+                        color: isOutOfStock
+                          ? "#f87171"
+                          : isLowStock
+                          ? "var(--accent-orange)"
+                          : "var(--accent-emerald)",
+                        background: isOutOfStock
+                          ? "rgba(239,68,68,0.1)"
+                          : isLowStock
+                          ? "rgba(249,115,22,0.1)"
+                          : "rgba(16,185,129,0.1)",
+                      }}
+                    >
+                      {isOutOfStock ? "Out of Stock" : `${p.stockQuantity} left`}
+                    </span>
+                  </div>
+
+                  <h3 style={styles.productName}>{p.name}</h3>
+                  <p style={styles.productBrand}>{p.brandName || "Generic"}</p>
+
+                  <div style={styles.productCardFooter}>
+                    <div style={styles.priceContainer}>
+                      <span style={styles.productPrice}>{formatCurrency(p.price)}</span>
+                      <span style={styles.productUnit}>/{p.unit}</span>
+                    </div>
+
+                    <button
+                      onClick={() => handleAddToBasket(p)}
+                      disabled={isOutOfStock}
+                      style={{
+                        ...styles.addBtn,
+                        opacity: isOutOfStock ? 0.5 : 1,
+                      }}
+                    >
+                      {inBasket ? `In Basket (${inBasket.quantity})` : "+ Add"}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+
+            {filteredProducts.length === 0 && (
+              <div style={styles.noResults}>
+                <FiLayers size={36} style={{ color: "var(--text-muted)", marginBottom: "8px" }} />
+                <p>No products match your search/filters.</p>
+                <Link to="/products" className="btn btn-secondary" style={{ marginTop: "12px" }}>
+                  Add Product to Catalog
+                </Link>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Right Side: Customer basket summary and checkout */}
+        <div className="glass-panel" style={styles.basketSection}>
+          <div style={styles.basketHeader}>
+            <FiShoppingCart size={20} style={{ color: "var(--accent-blue)" }} />
+            <h2 style={styles.basketTitle}>Customer Basket</h2>
+          </div>
+
+          <form onSubmit={handleCheckout} style={styles.basketForm}>
+            {/* Customer select */}
             <div className="form-group">
-              <label htmlFor="clientId">Select Recipient Client *</label>
+              <label htmlFor="clientSelect" style={styles.basketLabel}>
+                Customer Profile *
+              </label>
               <select
-                id="clientId"
+                id="clientSelect"
                 className="form-input"
-                value={clientId}
-                onChange={(e) => setClientId(e.target.value)}
+                value={selectedClientId}
+                onChange={(e) => setSelectedClientId(e.target.value)}
                 required
+                style={styles.basketSelect}
               >
-                <option value="">-- Choose Client --</option>
+                <option value="">-- Choose Customer --</option>
                 {clients.map((c) => (
                   <option key={c._id} value={c._id}>
-                    {c.businessName ? `${c.businessName} (Contact: ${c.name})` : c.name} {c.email ? `(${c.email})` : ""}
+                    {c.name} {c.phone ? `(${c.phone})` : ""}
                   </option>
                 ))}
               </select>
             </div>
 
-            <div style={styles.twoColumn}>
-              <div className="form-group" style={{ flex: 1 }}>
-                <label htmlFor="issueDate">Issue Date *</label>
-                <input
-                  type="date"
-                  id="issueDate"
-                  className="form-input"
-                  value={issueDate}
-                  onChange={(e) => setIssueDate(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="form-group" style={{ flex: 1 }}>
-                <label htmlFor="dueDate">Due Date *</label>
-                <input
-                  type="date"
-                  id="dueDate"
-                  className="form-input"
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="status">Initial Status</label>
-              <select
-                id="status"
-                className="form-input"
-                value={status}
-                onChange={(e) => setStatus(e.target.value)}
-              >
-                <option value="pending">Pending</option>
-                <option value="paid">Paid</option>
-                <option value="unpaid">Unpaid</option>
-                <option value="draft">Draft</option>
-              </select>
-            </div>
-
-            {/* Line Items builder */}
-            <div style={{ marginTop: "30px" }}>
-              <div style={styles.itemHeaderRow}>
-                <h3 style={styles.panelTitle}>Billing Line Items</h3>
-                <button type="button" className="btn btn-secondary" style={{ padding: "8px 16px" }} onClick={handleAddItemRow}>
-                  <FiPlus size={14} /> Add Line
-                </button>
-              </div>
-
-              <div style={styles.itemsList}>
-                {items.map((item, idx) => (
-                  <div key={idx} style={styles.itemRow}>
-                    {/* Row 1: Item selection, Brand, and Rate */}
-                    <div style={styles.itemRowGroup}>
-                      <div style={{ flex: 2.5 }}>
-                        <label style={styles.itemRowLabel}>Item</label>
-                        <select
-                          className="form-input"
-                          value={item.productId}
-                          onChange={(e) => handleItemChange(idx, "productId", e.target.value)}
-                          required
-                        >
-                          <option value="">-- Pick Product --</option>
-                          {products.map((p) => (
-                            <option key={p._id} value={p._id}>
-                              {p.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div style={{ flex: 1.5 }}>
-                        <label style={styles.itemRowLabel}>Brand Name</label>
-                        <input
-                          type="text"
-                          className="form-input"
-                          placeholder="Brand"
-                          value={item.brandName || ""}
-                          onChange={(e) => handleItemChange(idx, "brandName", e.target.value)}
-                        />
-                      </div>
-
-                      <div style={{ flex: 1.2 }}>
-                        <label style={styles.itemRowLabel}>Rate (INR)</label>
-                        <input
-                          type="number"
-                          min="0"
-                          step="any"
-                          className="form-input"
-                          value={item._price}
-                          onChange={(e) => handleItemChange(idx, "_price", e.target.value)}
-                          required
-                        />
-                      </div>
+            {/* Selected items list */}
+            <div style={styles.basketItemsList}>
+              <h3 style={styles.itemsListTitle}>Items</h3>
+              {basket.length === 0 ? (
+                <div style={styles.emptyBasket}>
+                  <p>Basket is empty. Select products from the left to start.</p>
+                </div>
+              ) : (
+                basket.map((item) => (
+                  <div key={item.product._id} style={styles.basketItemRow}>
+                    <div style={styles.basketItemInfo}>
+                      <span style={styles.basketItemName}>{item.product.name}</span>
+                      <span style={styles.basketItemPrice}>
+                        {formatCurrency(item.product.price)} x {item.quantity}
+                      </span>
                     </div>
 
-                    {/* Row 2: Size, Unit, Total Quantity, Amount, and Delete */}
-                    <div style={{ ...styles.itemRowGroup, marginTop: "12px" }}>
-                      <div style={{ flex: 1.0 }}>
-                        <label style={styles.itemRowLabel}>Size</label>
-                        <input
-                          type="number"
-                          step="any"
-                          min="0.001"
-                          className="form-input"
-                          placeholder="Size"
-                          value={item.size || "1"}
-                          onChange={(e) => handleItemChange(idx, "size", e.target.value)}
-                          required
-                        />
-                      </div>
-
-                      <div style={{ flex: 1.2 }}>
-                        <label style={styles.itemRowLabel}>Unit</label>
-                        <select
-                          className="form-input"
-                          value={item.billingUnit || item._unit}
-                          onChange={(e) => handleItemChange(idx, "billingUnit", e.target.value)}
-                          disabled={!item.productId}
-                          required
-                        >
-                          {getCompatibleUnits(item._unit).map((u) => (
-                            <option key={u} value={u}>
-                              {u}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div style={{ flex: 1.0 }}>
-                        <label style={styles.itemRowLabel}>Total Qty</label>
-                        <input
-                          type="number"
-                          min="0.001"
-                          step="any"
-                          className="form-input"
-                          value={item.quantity}
-                          onChange={(e) => handleItemChange(idx, "quantity", e.target.value)}
-                          required
-                        />
-                      </div>
-
-                      <div style={{ flex: 1.5 }}>
-                        <label style={styles.itemRowLabel}>Amount</label>
-                        <input
-                          type="text"
-                          className="form-input"
-                          style={{ color: "var(--accent-blue)", fontWeight: "600" }}
-                          value={formatCurrency(getItemSubtotal(item))}
-                          disabled
-                        />
-                      </div>
-
+                    <div style={styles.basketItemActions}>
                       <button
                         type="button"
-                        style={styles.deleteRowBtn}
-                        onClick={() => handleRemoveItemRow(idx)}
-                        disabled={items.length === 1}
-                        title="Remove Row"
+                        onClick={() => handleUpdateQuantity(item.product._id, -1)}
+                        style={styles.qtyBtn}
                       >
-                        <FiTrash size={14} />
+                        <FiMinus size={12} />
+                      </button>
+                      <span style={styles.qtyText}>{item.quantity}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleUpdateQuantity(item.product._id, 1)}
+                        style={styles.qtyBtn}
+                      >
+                        <FiPlus size={12} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveFromBasket(item.product._id)}
+                        style={styles.removeBtn}
+                      >
+                        <FiTrash size={12} />
                       </button>
                     </div>
                   </div>
+                ))
+              )}
+            </div>
+
+            {/* Divider */}
+            <div style={styles.divider}></div>
+
+            {/* Payment Method Selector */}
+            <div className="form-group" style={{ marginTop: "16px" }}>
+              <label style={styles.basketLabel}>Payment Method</label>
+              <div style={styles.paymentMethodGroup}>
+                {["Cash", "Card", "UPI", "Store Credit"].map((method) => (
+                  <label
+                    key={method}
+                    style={{
+                      ...styles.paymentOption,
+                      border: paymentMethod === method ? "1.5px solid var(--accent-blue)" : "1px solid var(--glass-border)",
+                      background: paymentMethod === method ? "rgba(59, 130, 246, 0.08)" : "transparent",
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value={method}
+                      checked={paymentMethod === method}
+                      onChange={() => setPaymentMethod(method)}
+                      style={{ display: "none" }}
+                    />
+                    {method}
+                  </label>
                 ))}
               </div>
             </div>
-          </div>
 
-          {/* Form right (Summary block) */}
-          <div className="glass-panel" style={styles.rightPanel}>
-            <h2 style={styles.panelTitle}>Invoice Summary</h2>
-
-            <div style={styles.summaryList}>
-              <div style={styles.summaryRow}>
-                <span style={styles.summaryLabel}>Client Recipient</span>
-                <span style={styles.summaryVal}>
-                  {clientId
-                    ? (() => {
-                        const selectedClient = clients.find((c) => c._id === clientId);
-                        return selectedClient
-                          ? selectedClient.businessName
-                            ? `${selectedClient.businessName} (${selectedClient.name})`
-                            : selectedClient.name
-                          : "Not selected";
-                      })()
-                    : "Not selected"}
-                </span>
-              </div>
-
-              <div style={styles.summaryRow}>
-                <span style={styles.summaryLabel}>Total Line Items</span>
-                <span style={styles.summaryVal}>{items.filter((i) => i.productId).length}</span>
-              </div>
-
-              <div style={styles.summaryRow}>
-                <span style={styles.summaryLabel}>Status Assignment</span>
-                <span className={`status-badge ${status}`} style={{ fontSize: "0.8rem", padding: "4px 10px" }}>
-                  {status}
-                </span>
-              </div>
-
-              <div style={styles.divider}></div>
-
-              <div style={{ ...styles.summaryRow, margin: "20px 0" }}>
-                <span style={styles.totalLabel}>Total Due</span>
-                <span style={styles.totalValue}>{formatCurrency(calculateTotal())}</span>
-              </div>
+            {/* Totals */}
+            <div style={styles.totalRow}>
+              <span style={styles.totalLabel}>Grand Total</span>
+              <span style={styles.totalVal}>{formatCurrency(calculateTotal())}</span>
             </div>
 
-            <div style={styles.summaryActions}>
-              <button
-                type="submit"
-                className="btn btn-primary"
-                style={styles.actionBtnFull}
-                disabled={submitting}
-              >
-                {submitting ? "Signing Invoices..." : "⚡ Generate Statement"}
-              </button>
-              <Link to="/bills" className="btn btn-secondary" style={styles.actionBtnFull}>
-                Cancel Builder
-              </Link>
-            </div>
-          </div>
-        </form>
-      )}
+            {/* Actions */}
+            <button
+              type="submit"
+              className="btn btn-primary"
+              style={styles.checkoutBtn}
+              disabled={submitting || basket.length === 0}
+            >
+              {submitting ? "Processing checkout..." : "⚡ Complete & Generate Bill"}
+            </button>
+          </form>
+        </div>
+      </div>
     </div>
   );
 };
 
 const styles = {
+  posContainer: {
+    paddingBottom: "40px",
+  },
   header: {
-    marginBottom: "35px",
+    marginBottom: "24px",
   },
   title: {
     fontSize: "1.8rem",
@@ -469,122 +423,289 @@ const styles = {
     color: "var(--text-secondary)",
     marginTop: "4px",
   },
-  formContainer: {
+  mainLayout: {
     display: "flex",
-    gap: "30px",
+    gap: "24px",
     alignItems: "flex-start",
   },
-  leftPanel: {
-    flex: 2,
-    padding: "30px",
+  catalogSection: {
+    flex: 1.5,
+    display: "flex",
+    flexDirection: "column",
+    gap: "20px",
   },
-  rightPanel: {
-    flex: 1,
-    padding: "30px",
+  searchBarWrapper: {
+    padding: "20px",
+    display: "flex",
+    flexDirection: "column",
+    gap: "16px",
+  },
+  searchInputContainer: {
+    position: "relative",
+    width: "100%",
+  },
+  searchIcon: {
+    position: "absolute",
+    left: "14px",
+    top: "50%",
+    transform: "translateY(-50%)",
+    color: "var(--text-muted)",
+  },
+  searchInput: {
+    width: "100%",
+    background: "rgba(8, 12, 20, 0.6)",
+    border: "1px solid var(--glass-border)",
+    borderRadius: "var(--border-radius-md)",
+    padding: "12px 16px 12px 42px",
+    color: "#ffffff",
+    fontSize: "0.95rem",
+    outline: "none",
+  },
+  categoryTabs: {
+    display: "flex",
+    gap: "8px",
+    overflowX: "auto",
+    paddingBottom: "4px",
+  },
+  categoryTabBtn: {
+    background: "rgba(255, 255, 255, 0.03)",
+    border: "1px solid var(--glass-border)",
+    borderRadius: "20px",
+    padding: "6px 16px",
+    color: "var(--text-secondary)",
+    fontSize: "0.85rem",
+    fontWeight: "500",
+    cursor: "pointer",
+    whiteSpace: "nowrap",
+    transition: "all 0.2s ease",
+  },
+  activeCategoryTab: {
+    background: "var(--accent-blue)",
+    borderColor: "var(--accent-blue)",
+    color: "#ffffff",
+  },
+  productGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+    gap: "16px",
+  },
+  productCard: {
+    padding: "16px",
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "space-between",
+    minHeight: "160px",
+  },
+  productCardHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: "10px",
+  },
+  productCategory: {
+    fontSize: "0.75rem",
+    color: "var(--text-muted)",
+  },
+  stockBadge: {
+    fontSize: "0.72rem",
+    fontWeight: "600",
+    padding: "2px 8px",
+    borderRadius: "10px",
+  },
+  productName: {
+    fontSize: "1.05rem",
+    fontWeight: "700",
+    color: "#ffffff",
+    margin: "0 0 4px 0",
+  },
+  productBrand: {
+    fontSize: "0.8rem",
+    color: "var(--text-secondary)",
+    margin: "0 0 16px 0",
+  },
+  productCardFooter: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  priceContainer: {
+    display: "flex",
+    alignItems: "baseline",
+  },
+  productPrice: {
+    fontSize: "1.2rem",
+    fontWeight: "800",
+    color: "var(--accent-blue)",
+  },
+  productUnit: {
+    fontSize: "0.75rem",
+    color: "var(--text-secondary)",
+  },
+  addBtn: {
+    background: "rgba(255, 255, 255, 0.05)",
+    border: "1px solid var(--glass-border)",
+    borderRadius: "var(--border-radius-sm)",
+    padding: "6px 12px",
+    color: "#ffffff",
+    fontSize: "0.85rem",
+    fontWeight: "600",
+    cursor: "pointer",
+    transition: "all 0.2s",
+  },
+  noResults: {
+    gridColumn: "1 / -1",
+    textAlign: "center",
+    padding: "60px 20px",
+    color: "var(--text-muted)",
+  },
+  basketSection: {
+    flex: 1.1,
+    padding: "24px",
     position: "sticky",
-    top: "30px",
+    top: "24px",
   },
-  panelTitle: {
+  basketHeader: {
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    marginBottom: "20px",
+  },
+  basketTitle: {
     fontSize: "1.2rem",
     fontWeight: "700",
     color: "#ffffff",
-    marginBottom: "20px",
+    margin: 0,
   },
-  twoColumn: {
-    display: "flex",
-    gap: "16px",
-  },
-  itemHeaderRow: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: "20px",
-  },
-  itemsList: {
+  basketForm: {
     display: "flex",
     flexDirection: "column",
-    gap: "16px",
   },
-  itemRow: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "12px",
-    background: "rgba(255, 255, 255, 0.02)",
-    border: "1px solid var(--glass-border)",
-    padding: "16px",
-    borderRadius: "var(--border-radius-md)",
+  basketLabel: {
+    fontSize: "0.85rem",
+    fontWeight: "600",
+    color: "var(--text-secondary)",
+    marginBottom: "6px",
+    display: "block",
   },
-  itemRowGroup: {
-    display: "flex",
-    gap: "16px",
-    alignItems: "flex-end",
+  basketSelect: {
     width: "100%",
   },
-  itemRowLabel: {
-    display: "block",
-    fontSize: "0.75rem",
-    fontWeight: "600",
+  basketItemsList: {
+    margin: "20px 0",
+    maxHeight: "300px",
+    overflowY: "auto",
+    paddingRight: "4px",
+  },
+  itemsListTitle: {
+    fontSize: "0.9rem",
     color: "var(--text-muted)",
     textTransform: "uppercase",
-    marginBottom: "6px",
+    marginBottom: "10px",
+    letterSpacing: "0.5px",
   },
-  deleteRowBtn: {
-    background: "rgba(239, 68, 68, 0.08)",
-    border: "1px solid rgba(239, 68, 68, 0.2)",
-    color: "#f87171",
-    cursor: "pointer",
-    padding: "12px",
-    borderRadius: "var(--border-radius-md)",
+  emptyBasket: {
+    padding: "30px 10px",
+    textAlign: "center",
+    color: "var(--text-muted)",
+    fontSize: "0.85rem",
+  },
+  basketItemRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: "10px 0",
+    borderBottom: "1px solid rgba(255, 255, 255, 0.05)",
+  },
+  basketItemInfo: {
+    display: "flex",
+    flexDirection: "column",
+  },
+  basketItemName: {
+    fontSize: "0.92rem",
+    fontWeight: "600",
+    color: "#ffffff",
+  },
+  basketItemPrice: {
+    fontSize: "0.8rem",
+    color: "var(--text-secondary)",
+    marginTop: "2px",
+  },
+  basketItemActions: {
+    display: "flex",
+    alignItems: "center",
+    gap: "6px",
+  },
+  qtyBtn: {
+    background: "rgba(255, 255, 255, 0.05)",
+    border: "1px solid var(--glass-border)",
+    color: "#ffffff",
+    width: "24px",
+    height: "24px",
+    borderRadius: "50%",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    transition: "var(--transition-smooth)",
+    cursor: "pointer",
   },
-  summaryList: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "14px",
-    margin: "20px 0",
-  },
-  summaryRow: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    fontSize: "0.95rem",
-  },
-  summaryLabel: {
-    color: "var(--text-secondary)",
-  },
-  summaryVal: {
+  qtyText: {
+    fontSize: "0.9rem",
     color: "#ffffff",
-    fontWeight: "600",
+    minWidth: "16px",
+    textAlign: "center",
+  },
+  removeBtn: {
+    background: "transparent",
+    border: "none",
+    color: "#f87171",
+    cursor: "pointer",
+    padding: "4px",
+    marginLeft: "4px",
   },
   divider: {
     height: "1px",
     background: "var(--glass-border)",
     width: "100%",
+    margin: "12px 0",
+  },
+  paymentMethodGroup: {
+    display: "grid",
+    gridTemplateColumns: "repeat(2, 1fr)",
+    gap: "10px",
+  },
+  paymentOption: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "10px",
+    borderRadius: "var(--border-radius-sm)",
+    cursor: "pointer",
+    fontSize: "0.85rem",
+    fontWeight: "600",
+    color: "#ffffff",
+    userSelect: "none",
+    transition: "all 0.2s",
+  },
+  totalRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    margin: "24px 0",
   },
   totalLabel: {
-    fontSize: "1.05rem",
+    fontSize: "1.1rem",
     fontWeight: "700",
     color: "#ffffff",
   },
-  totalValue: {
-    fontSize: "1.4rem",
+  totalVal: {
+    fontSize: "1.5rem",
     fontWeight: "800",
     color: "var(--accent-emerald)",
   },
-  actionBtnFull: {
+  checkoutBtn: {
     width: "100%",
-  },
-  summaryActions: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "12px",
-  },
-  emptyState: {
-    textAlign: "center",
-    padding: "60px 20px",
+    padding: "14px",
+    fontSize: "1rem",
+    fontWeight: "700",
   },
   centerContainer: {
     display: "flex",
