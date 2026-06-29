@@ -15,7 +15,15 @@ const billSchema = new Schema(
     clientId: {
       type: Schema.Types.ObjectId,
       ref: "Client",
-      required: true,
+      required: false,
+    },
+    customerName: {
+      type: String,
+      trim: true,
+    },
+    customerPhone: {
+      type: String,
+      trim: true,
     },
     issueDate: {
       type: Date,

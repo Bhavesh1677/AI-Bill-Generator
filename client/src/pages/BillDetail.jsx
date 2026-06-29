@@ -37,7 +37,7 @@ const BillDetail = () => {
     const nextStatus = e.target.value;
     setStatusUpdating(true);
     try {
-      await API.patch(`/bills/${id}`, { status: nextStatus });
+      await API.patch(`/bills/${id}/status`, { status: nextStatus });
       setBill((prev) => ({ ...prev, status: nextStatus }));
     } catch (err) {
       alert("Failed to modify invoice status.");
@@ -232,8 +232,15 @@ const BillDetail = () => {
                   <p style={styles.addressSubtext}>Mobile: {bill.clientId.phone}</p>
                 )}
               </>
+            ) : bill.customerName ? (
+              <>
+                <h4 style={styles.addressName}>{bill.customerName}</h4>
+                {bill.customerPhone && (
+                  <p style={styles.addressSubtext}>Mobile: {bill.customerPhone}</p>
+                )}
+              </>
             ) : (
-              <p style={{ color: "#ef4444", fontWeight: "600", fontSize: "0.875rem" }}>[Client Profile Deleted]</p>
+              <h4 style={styles.addressName}>Walk-in Customer</h4>
             )}
           </div>
         </div>

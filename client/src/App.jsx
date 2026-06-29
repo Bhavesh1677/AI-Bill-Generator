@@ -15,6 +15,8 @@ import CreateBill from "./pages/CreateBill";
 import BillDetail from "./pages/BillDetail";
 import Suppliers from "./pages/Suppliers";
 import LandingPage from "./pages/LandingPage";
+import ProfitLossReport from "./pages/ProfitLossReport";
+import UnsoldStockList from "./pages/UnsoldStockList";
 
 // AppLayout houses the left sidebar nav and a scrolling main viewport
 const AppLayout = () => {
@@ -46,6 +48,8 @@ function App() {
             <Route path="/clients" element={<Clients />} />
             <Route path="/products" element={<Products />} />
             <Route path="/suppliers" element={<Suppliers />} />
+            <Route path="/reports/profit-loss" element={<ProfitLossReport />} />
+            <Route path="/inventory/unsold-stock" element={<UnsoldStockList />} />
             <Route path="/bills" element={<Bills />} />
             <Route path="/bills/create" element={<CreateBill />} />
             <Route path="/bills/:id" element={<BillDetail />} />

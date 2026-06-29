@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import API from "../utils/api";
-import { FiPlus, FiTrash, FiUser, FiLayers, FiSearch, FiShoppingCart, FiMinus } from "react-icons/fi";
+import { FiPlus, FiTrash, FiLayers, FiSearch, FiShoppingCart, FiMinus, FiDollarSign, FiCreditCard, FiBookOpen } from "react-icons/fi";
+import { BsQrCode } from "react-icons/bs";
 
 const CreateBill = () => {
   const [clients, setClients] = useState([]);
@@ -11,7 +12,9 @@ const CreateBill = () => {
   const [submitting, setSubmitting] = useState(false);
 
   // POS State
-  const [selectedClientId, setSelectedClientId] = useState("");
+  const [selectedClientId, setSelectedClientId] = useState("walk-in");
+  const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [basket, setBasket] = useState([]);
@@ -111,6 +114,10 @@ const CreateBill = () => {
       setError("Please select a customer before checking out.");
       return;
     }
+    if (selectedClientId === "walk-in" && paymentMethod === "Store Credit") {
+      setError("Customer profile is required for Store Credit (Khata) payment method.");
+      return;
+    }
     if (basket.length === 0) {
       setError("Please add at least one item to the basket.");
       return;
@@ -121,7 +128,9 @@ const CreateBill = () => {
 
     try {
       const checkoutData = {
-        clientId: selectedClientId,
+        clientId: selectedClientId === "walk-in" ? null : selectedClientId,
+        customerName: selectedClientId === "walk-in" ? (customerName || "Walk-in Customer") : undefined,
+        customerPhone: selectedClientId === "walk-in" ? customerPhone : undefined,
         paymentMethod,
         issueDate: new Date().toISOString().split("T")[0],
         dueDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split("T")[0], // default 15 days
@@ -289,7 +298,7 @@ const CreateBill = () => {
             {/* Customer select */}
             <div className="form-group">
               <label htmlFor="clientSelect" style={styles.basketLabel}>
-                Customer Profile *
+                Khata Customer *
               </label>
               <select
                 id="clientSelect"
@@ -299,7 +308,7 @@ const CreateBill = () => {
                 required
                 style={styles.basketSelect}
               >
-                <option value="">-- Choose Customer --</option>
+                <option value="walk-in">-- Walk-in Customer (No Khata) --</option>
                 {clients.map((c) => (
                   <option key={c._id} value={c._id}>
                     {c.name} {c.phone ? `(${c.phone})` : ""}
@@ -307,6 +316,33 @@ const CreateBill = () => {
                 ))}
               </select>
             </div>
+
+            {selectedClientId === "walk-in" && (
+              <div style={{ display: "flex", gap: "10px", marginBottom: "16px" }}>
+                <div style={{ flex: 1 }}>
+                  <label htmlFor="customerName" style={styles.basketLabel}>Customer Name (Optional)</label>
+                  <input
+                    type="text"
+                    id="customerName"
+                    className="form-input"
+                    placeholder="E.g. John Doe"
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label htmlFor="customerPhone" style={styles.basketLabel}>Phone Number (Optional)</label>
+                  <input
+                    type="text"
+                    id="customerPhone"
+                    className="form-input"
+                    placeholder="E.g. 9876543210"
+                    value={customerPhone}
+                    onChange={(e) => setCustomerPhone(e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
 
             {/* Selected items list */}
             <div style={styles.basketItemsList}>
@@ -361,24 +397,30 @@ const CreateBill = () => {
             <div className="form-group" style={{ marginTop: "16px" }}>
               <label style={styles.basketLabel}>Payment Method</label>
               <div style={styles.paymentMethodGroup}>
-                {["Cash", "Card", "UPI", "Store Credit"].map((method) => (
+                {[
+                  { name: "Cash", icon: <FiDollarSign size={16} style={{ marginRight: "6px" }} /> },
+                  { name: "Card", icon: <FiCreditCard size={16} style={{ marginRight: "6px" }} /> },
+                  { name: "UPI", icon: <BsQrCode size={16} style={{ marginRight: "6px" }} /> },
+                  { name: "Store Credit", icon: <FiBookOpen size={16} style={{ marginRight: "6px" }} /> },
+                ].map((item) => (
                   <label
-                    key={method}
+                    key={item.name}
                     style={{
                       ...styles.paymentOption,
-                      border: paymentMethod === method ? "1.5px solid var(--accent-blue)" : "1px solid var(--glass-border)",
-                      background: paymentMethod === method ? "rgba(59, 130, 246, 0.08)" : "transparent",
+                      border: paymentMethod === item.name ? "1.5px solid var(--accent-blue)" : "1px solid var(--glass-border)",
+                      background: paymentMethod === item.name ? "rgba(59, 130, 246, 0.08)" : "transparent",
                     }}
                   >
                     <input
                       type="radio"
                       name="paymentMethod"
-                      value={method}
-                      checked={paymentMethod === method}
-                      onChange={() => setPaymentMethod(method)}
+                      value={item.name}
+                      checked={paymentMethod === item.name}
+                      onChange={() => setPaymentMethod(item.name)}
                       style={{ display: "none" }}
                     />
-                    {method}
+                    {item.icon}
+                    {item.name}
                   </label>
                 ))}
               </div>
@@ -429,7 +471,7 @@ const styles = {
     alignItems: "flex-start",
   },
   catalogSection: {
-    flex: 1.5,
+    flex: 1.1,
     display: "flex",
     flexDirection: "column",
     gap: "20px",
@@ -439,6 +481,7 @@ const styles = {
     display: "flex",
     flexDirection: "column",
     gap: "16px",
+    maxWidth: "650px",
   },
   searchInputContainer: {
     position: "relative",
@@ -559,7 +602,7 @@ const styles = {
     color: "var(--text-muted)",
   },
   basketSection: {
-    flex: 1.1,
+    flex: 1.4,
     padding: "24px",
     position: "sticky",
     top: "24px",

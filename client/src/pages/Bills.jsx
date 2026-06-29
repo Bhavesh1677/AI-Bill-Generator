@@ -51,10 +51,12 @@ const Bills = () => {
 
   // Perform client side search & status filtering
   const filteredBills = bills.filter((bill) => {
+    const nameToSearch = bill.clientId ? (bill.clientId.name || "") : (bill.customerName || "Walk-in Customer");
     const matchesSearch =
       bill.billNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (bill.clientId?.name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (bill.clientId?.email || "").toLowerCase().includes(searchQuery.toLowerCase());
+      nameToSearch.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (bill.clientId?.email || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (bill.customerPhone || "").includes(searchQuery);
       
     const matchesStatus = statusFilter === "all" || bill.status.toLowerCase() === statusFilter.toLowerCase();
     
@@ -156,8 +158,12 @@ const Bills = () => {
                     <td style={{ ...styles.td, fontWeight: "600", color: "#ffffff" }}>{bill.billNumber}</td>
                     <td style={styles.td}>
                       <div>
-                        <p style={{ fontWeight: "600", color: "#ffffff" }}>{bill.clientId?.name || "Deleted Client"}</p>
-                        <p style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>{bill.clientId?.email}</p>
+                        <p style={{ fontWeight: "600", color: "#ffffff" }}>
+                          {bill.clientId ? (bill.clientId.businessName || bill.clientId.name) : (bill.customerName || "Walk-in Customer")}
+                        </p>
+                        <p style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                          {bill.clientId ? bill.clientId.email : (bill.customerPhone || "One-time customer")}
+                        </p>
                       </div>
                     </td>
                     <td style={styles.td}>{new Date(bill.issueDate).toLocaleDateString()}</td>

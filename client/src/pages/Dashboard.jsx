@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import API from "../utils/api";
-import { FiFileText, FiUsers, FiClock, FiEye, FiArrowRight, FiBox, FiAlertTriangle } from "react-icons/fi";
+import { FiFileText, FiUsers, FiClock, FiEye, FiArrowRight, FiBox, FiAlertTriangle, FiTrendingUp } from "react-icons/fi";
 import { FaRupeeSign } from "react-icons/fa";
 
 const Dashboard = () => {
@@ -10,19 +10,27 @@ const Dashboard = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [stats, setStats] = useState({
+    totalProfit: 0,
+    realizedProfit: 0,
+    unsoldStockValueCost: 0,
+    unsoldStockValueSelling: 0,
+  });
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
-        const [billsRes, clientsRes, productsRes] = await Promise.all([
+        const [billsRes, clientsRes, productsRes, statsRes] = await Promise.all([
           API.get("/bills"),
           API.get("/clients"),
           API.get("/products"),
+          API.get("/bills/dashboard-stats"),
         ]);
         setBills(billsRes.data.data);
         setClients(clientsRes.data.data);
         setProducts(productsRes.data.data);
+        setStats(statsRes.data.data);
       } catch (err) {
         setError("Failed to load dashboard metrics. Ensure server is running.");
         console.error(err);
@@ -109,6 +117,28 @@ const Dashboard = () => {
             <p style={styles.statDesc}>Successful POS cashouts</p>
           </div>
         </div>
+
+        <Link to="/reports/profit-loss" className="glass-panel glass-panel-hover" style={{ ...styles.statCard, textDecoration: "none", cursor: "pointer" }}>
+          <div style={{ ...styles.iconWrapper, background: "rgba(139, 92, 246, 0.12)", color: "#a78bfa" }}>
+            <FiTrendingUp size={22} />
+          </div>
+          <div>
+            <p style={styles.statLabel}>Total Profit</p>
+            <h3 style={{ ...styles.statValue, color: "#a78bfa" }}>{formatCurrency(stats.totalProfit)}</h3>
+            <p style={styles.statDesc}>Realized: {formatCurrency(stats.realizedProfit)}</p>
+          </div>
+        </Link>
+
+        <Link to="/inventory/unsold-stock" className="glass-panel glass-panel-hover" style={{ ...styles.statCard, textDecoration: "none", cursor: "pointer" }}>
+          <div style={{ ...styles.iconWrapper, background: "rgba(6, 182, 212, 0.12)", color: "#22d3ee" }}>
+            <FiBox size={22} />
+          </div>
+          <div>
+            <p style={styles.statLabel}>Unsold Stock Value</p>
+            <h3 style={{ ...styles.statValue, color: "#22d3ee" }}>{formatCurrency(stats.unsoldStockValueCost)}</h3>
+            <p style={styles.statDesc}>Selling: {formatCurrency(stats.unsoldStockValueSelling)}</p>
+          </div>
+        </Link>
 
         <div className="glass-panel glass-panel-hover" style={styles.statCard}>
           <div style={{ ...styles.iconWrapper, background: "rgba(239, 68, 68, 0.12)", color: "#f87171" }}>
