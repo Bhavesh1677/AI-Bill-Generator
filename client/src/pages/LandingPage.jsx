@@ -94,7 +94,7 @@ const LandingPage = () => {
       <header style={styles.navHeader}>
         <div style={styles.brandContainer}>
           <img src="/logo.png" alt="Logo" style={styles.logoIcon} />
-          <span style={styles.brandName}>Store POS</span>
+          <span style={styles.brandName}>IndoPOS</span>
         </div>
         <div style={styles.navLinks}>
           <a href="#features" style={styles.navLink}>Features</a>
@@ -155,7 +155,7 @@ const LandingPage = () => {
             <div style={styles.previewDotRed}></div>
             <div style={styles.previewDotYellow}></div>
             <div style={styles.previewDotGreen}></div>
-            <span style={styles.previewTitle}>Store POS - Cashier Interface</span>
+            <span style={styles.previewTitle}>IndoPOS - Cashier Interface</span>
           </div>
           <div style={styles.previewBody}>
             <div style={styles.dummyPOS}>
@@ -264,7 +264,7 @@ const LandingPage = () => {
 
       {/* Footer */}
       <footer style={styles.footer}>
-        <p>© 2026 Store POS System. Crafted by Antigravity Team. All Rights Reserved.</p>
+        <p>© 2026 IndoPOS System. Crafted by Antigravity Team. All Rights Reserved.</p>
       </footer>
     </div>
   );

@@ -104,7 +104,7 @@ const Sidebar = () => {
       <aside style={styles.sidebar}>
         <div style={styles.logoContainer}>
           <img src="/logo.png" alt="Logo" style={styles.logoIcon} />
-          <h2 style={styles.logoText}>Store POS</h2>
+          <h2 style={styles.logoText}>IndoPOS</h2>
         </div>
 
         <nav style={styles.nav}>
