@@ -11,19 +11,38 @@ import supplierRouter from "./routes/supplier.routes.js";
 
 const app = express();
 
+app.set("trust proxy", 1);
+
+const cleanOrigin = (url) => (url ? url.trim().replace(/\/$/, "") : "");
+
 app.use(
   cors({
     origin: function (origin, callback) {
       if (!origin) return callback(null, true);
-      // Allow any localhost origin dynamically (e.g., localhost:5173, localhost:5174, etc.)
-      if (/^http:\/\/localhost:\d+$/.test(origin)) {
+      const normalizedOrigin = cleanOrigin(origin);
+
+      // Allow any localhost / 127.0.0.1 origin dynamically
+      if (/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(normalizedOrigin)) {
         return callback(null, true);
       }
-      const allowed = process.env.CORS_ORIGIN || "http://localhost:5173";
-      if (allowed === "*" || allowed.split(",").includes(origin)) {
+
+      // Allow Vercel production and preview domains
+      if (/^https:\/\/.*\.vercel\.app$/.test(normalizedOrigin) || normalizedOrigin === "https://indopos.vercel.app") {
         return callback(null, true);
       }
-      return callback(new Error("Not allowed by CORS"));
+
+      // Allow configured origins from CORS_ORIGIN
+      const allowedEnv = process.env.CORS_ORIGIN || "http://localhost:5173";
+      if (allowedEnv === "*") {
+        return callback(null, true);
+      }
+
+      const allowedList = allowedEnv.split(",").map(cleanOrigin);
+      if (allowedList.includes(normalizedOrigin)) {
+        return callback(null, true);
+      }
+
+      return callback(null, false);
     },
     credentials: true,
   })

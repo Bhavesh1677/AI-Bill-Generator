@@ -1,6 +1,16 @@
 import axios from "axios";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
+const isProdEnv =
+  import.meta.env.PROD ||
+  (typeof window !== "undefined" &&
+    !window.location.hostname.includes("localhost") &&
+    !window.location.hostname.includes("127.0.0.1"));
+
+const DEFAULT_API_URL = isProdEnv
+  ? "https://ai-bill-generator.onrender.com/api/v1"
+  : "http://localhost:8000/api/v1";
+
+const API_BASE = import.meta.env.VITE_API_URL || DEFAULT_API_URL;
 
 const API = axios.create({
   baseURL: API_BASE,
