@@ -19,12 +19,17 @@ export const AuthProvider = ({ children }) => {
           const res = await API.get("/users/me");
           setUser(res.data.data);
         } catch (error) {
-          console.log("Failed to fetch user with stored access token, trying silent refresh...");
+          console.log(
+            "Failed to fetch user with stored access token, trying silent refresh...",
+          );
           // Try silent refresh using refresh token in localStorage/cookies
           if (refreshToken) {
             try {
-              const refreshRes = await API.post("/users/refresh-token", { refreshToken });
-              const { accessToken, refreshToken: newRefreshToken } = refreshRes.data.data;
+              const refreshRes = await API.post("/users/refresh-token", {
+                refreshToken,
+              });
+              const { accessToken, refreshToken: newRefreshToken } =
+                refreshRes.data.data;
               localStorage.setItem("accessToken", accessToken);
               if (newRefreshToken) {
                 localStorage.setItem("refreshToken", newRefreshToken);
@@ -33,7 +38,9 @@ export const AuthProvider = ({ children }) => {
               const userRes = await API.get("/users/me");
               setUser(userRes.data.data);
             } catch (refreshErr) {
-              console.log("Silent refresh failed as well. Cleaning credentials.");
+              console.log(
+                "Silent refresh failed as well. Cleaning credentials.",
+              );
               localStorage.removeItem("accessToken");
               localStorage.removeItem("refreshToken");
             }
@@ -45,8 +52,11 @@ export const AuthProvider = ({ children }) => {
       } else if (refreshToken) {
         // No access token stored but refresh token exists, try silent refresh
         try {
-          const refreshRes = await API.post("/users/refresh-token", { refreshToken });
-          const { accessToken, refreshToken: newRefreshToken } = refreshRes.data.data;
+          const refreshRes = await API.post("/users/refresh-token", {
+            refreshToken,
+          });
+          const { accessToken, refreshToken: newRefreshToken } =
+            refreshRes.data.data;
           localStorage.setItem("accessToken", accessToken);
           if (newRefreshToken) {
             localStorage.setItem("refreshToken", newRefreshToken);
@@ -82,7 +92,9 @@ export const AuthProvider = ({ children }) => {
       localStorage.removeItem("refreshToken");
       return {
         success: false,
-        message: error.response?.data?.message || "Login failed, please check your credentials.",
+        message:
+          error.response?.data?.message ||
+          "Login failed, please check your credentials.",
       };
     } finally {
       setLoading(false);
@@ -98,7 +110,8 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       return {
         success: false,
-        message: error.response?.data?.message || "Registration failed. Try again.",
+        message:
+          error.response?.data?.message || "Registration failed. Try again.",
       };
     } finally {
       setLoading(false);
@@ -120,7 +133,9 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, setUser }}>
+    <AuthContext.Provider
+      value={{ user, loading, login, register, logout, setUser }}
+    >
       {children}
     </AuthContext.Provider>
   );

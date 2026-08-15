@@ -1,7 +1,7 @@
 import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { FiArrowRight, FiCheck, FiCpu, FiUsers, FiBox, FiTrendingUp, FiShoppingBag, FiLayers } from "react-icons/fi";
+import { FiArrowRight, FiCheck, FiCpu, FiUsers, FiBox, FiTrendingUp, FiShoppingBag, FiLayers, FiSearch, FiShoppingCart, FiMinus, FiPlus, FiTrash, FiBookOpen } from "react-icons/fi";
 
 const LandingPage = () => {
   const { user } = useAuth();
@@ -94,7 +94,6 @@ const LandingPage = () => {
       <header style={styles.navHeader}>
         <div style={styles.brandContainer}>
           <img src="/logo.png" alt="Logo" style={styles.logoIcon} />
-          <span style={styles.brandName}>IndoPOS</span>
         </div>
         <div style={styles.navLinks}>
           <a href="#features" style={styles.navLink}>Features</a>
@@ -155,27 +154,142 @@ const LandingPage = () => {
             <div style={styles.previewDotRed}></div>
             <div style={styles.previewDotYellow}></div>
             <div style={styles.previewDotGreen}></div>
-            <span style={styles.previewTitle}>IndoPOS - Cashier Interface</span>
+            <span style={styles.previewTitle}>IndoPOS - Cashier checkout terminal</span>
           </div>
           <div style={styles.previewBody}>
             <div style={styles.dummyPOS}>
+              {/* Left catalog section */}
               <div style={styles.dummyLeft}>
-                <div style={styles.dummySearch}>Search groceries...</div>
+                <div style={styles.dummySearchWrapper}>
+                  <FiSearch size={14} style={{ marginRight: "8px", color: "var(--text-muted)" }} />
+                  <span>Search products by name or brand...</span>
+                </div>
+                
+                {/* Category tabs */}
+                <div style={styles.dummyCategoryTabs}>
+                  <span style={{ ...styles.dummyTab, ...styles.dummyTabActive }}>All</span>
+                  <span style={styles.dummyTab}>Fruits & Veg</span>
+                  <span style={styles.dummyTab}>Dairy & Eggs</span>
+                  <span style={styles.dummyTab}>Bakery</span>
+                  <span style={styles.dummyTab}>Snacks</span>
+                </div>
+                
+                {/* Product Grid */}
                 <div style={styles.dummyGrid}>
-                  <div style={styles.dummyProductCard}>🥛 Milk (Dairy)</div>
-                  <div style={styles.dummyProductCard}>🍎 Apples (Fresh)</div>
-                  <div style={styles.dummyProductCard}>🍞 Bread (Bakery)</div>
-                  <div style={styles.dummyProductCard}>🍪 Cookies (Snacks)</div>
+                  <div style={styles.dummyProductCard}>
+                    <div style={styles.dummyCardHeader}>
+                      <span style={styles.dummyCategory}>Dairy & Eggs</span>
+                      <span style={{ ...styles.dummyStockBadge, color: "var(--accent-emerald)", background: "rgba(16,185,129,0.1)" }}>45 left</span>
+                    </div>
+                    <h4 style={styles.dummyProductName}>Organic Milk</h4>
+                    <p style={styles.dummyProductBrand}>Amul</p>
+                    <div style={styles.dummyCardFooter}>
+                      <span style={styles.dummyProductPrice}>₹60<span style={{ fontSize: "0.7rem", color: "var(--text-secondary)" }}>/Litre</span></span>
+                      <span style={styles.dummyAddBtnActive}>In Basket (1)</span>
+                    </div>
+                  </div>
+                  
+                  <div style={styles.dummyProductCard}>
+                    <div style={styles.dummyCardHeader}>
+                      <span style={styles.dummyCategory}>Fruits & Veg</span>
+                      <span style={{ ...styles.dummyStockBadge, color: "var(--accent-emerald)", background: "rgba(16,185,129,0.1)" }}>12 kg left</span>
+                    </div>
+                    <h4 style={styles.dummyProductName}>Sweet Apples</h4>
+                    <p style={styles.dummyProductBrand}>Fresh Orchard</p>
+                    <div style={styles.dummyCardFooter}>
+                      <span style={styles.dummyProductPrice}>₹120<span style={{ fontSize: "0.7rem", color: "var(--text-secondary)" }}>/kg</span></span>
+                      <span style={styles.dummyAddBtnActive}>In Basket (2)</span>
+                    </div>
+                  </div>
+
+                  <div style={styles.dummyProductCard}>
+                    <div style={styles.dummyCardHeader}>
+                      <span style={styles.dummyCategory}>Bakery & Bread</span>
+                      <span style={{ ...styles.dummyStockBadge, color: "var(--accent-orange)", background: "rgba(249,115,22,0.1)" }}>Low Stock</span>
+                    </div>
+                    <h4 style={styles.dummyProductName}>Whole Wheat Bread</h4>
+                    <p style={styles.dummyProductBrand}>Harvest Gold</p>
+                    <div style={styles.dummyCardFooter}>
+                      <span style={styles.dummyProductPrice}>₹40<span style={{ fontSize: "0.7rem", color: "var(--text-secondary)" }}>/Pack</span></span>
+                      <span style={styles.dummyAddBtn}>+ Add</span>
+                    </div>
+                  </div>
+
+                  <div style={styles.dummyProductCard}>
+                    <div style={styles.dummyCardHeader}>
+                      <span style={styles.dummyCategory}>Snacks & Sweets</span>
+                      <span style={{ ...styles.dummyStockBadge, color: "#f87171", background: "rgba(239,68,68,0.1)" }}>Out of Stock</span>
+                    </div>
+                    <h4 style={styles.dummyProductName}>Chocolate Cookies</h4>
+                    <p style={styles.dummyProductBrand}>Britannia</p>
+                    <div style={styles.dummyCardFooter}>
+                      <span style={styles.dummyProductPrice}>₹30<span style={{ fontSize: "0.7rem", color: "var(--text-secondary)" }}>/Pack</span></span>
+                      <span style={{ ...styles.dummyAddBtn, opacity: 0.4 }}>Out of Stock</span>
+                    </div>
+                  </div>
                 </div>
               </div>
+
+              {/* Right basket section */}
               <div style={styles.dummyRight}>
-                <div style={styles.dummyCartHeader}>Order Basket</div>
-                <div style={styles.dummyCartItem}>1x Organic Milk - ₹60</div>
-                <div style={styles.dummyCartItem}>2x Sweet Apples - ₹120</div>
-                <div style={styles.dummyCartTotal}>Total: ₹180</div>
-                <div style={styles.dummyPayMethod}>
-                  <span style={styles.activePay}>Store Credit (Khata)</span>
+                <div style={styles.dummyCartHeader}>
+                  <FiShoppingCart size={14} style={{ color: "var(--accent-blue)", marginRight: "8px" }} />
+                  <span>Customer Basket</span>
                 </div>
+                
+                <div style={styles.dummyFormGroup}>
+                  <span style={styles.dummyLabel}>Khata Customer *</span>
+                  <div style={styles.dummySelect}>Ramesh Kumar (9876543210)</div>
+                </div>
+
+                <div style={styles.dummyItemsList}>
+                  <div style={styles.dummyItemRow}>
+                    <div>
+                      <div style={styles.dummyItemName}>Organic Milk</div>
+                      <div style={styles.dummyItemPrice}>₹60 x 1</div>
+                    </div>
+                    <div style={styles.dummyQtyActions}>
+                      <span style={styles.dummyQtyCircle}><FiMinus size={10} /></span>
+                      <span style={{ fontSize: "0.85rem" }}>1</span>
+                      <span style={styles.dummyQtyCircle}><FiPlus size={10} /></span>
+                      <FiTrash size={12} style={{ color: "#f87171", marginLeft: "4px" }} />
+                    </div>
+                  </div>
+
+                  <div style={styles.dummyItemRow}>
+                    <div>
+                      <div style={styles.dummyItemName}>Sweet Apples</div>
+                      <div style={styles.dummyItemPrice}>₹120 x 2</div>
+                    </div>
+                    <div style={styles.dummyQtyActions}>
+                      <span style={styles.dummyQtyCircle}><FiMinus size={10} /></span>
+                      <span style={{ fontSize: "0.85rem" }}>2</span>
+                      <span style={styles.dummyQtyCircle}><FiPlus size={10} /></span>
+                      <FiTrash size={12} style={{ color: "#f87171", marginLeft: "4px" }} />
+                    </div>
+                  </div>
+                </div>
+
+                <div style={styles.dummyDivider}></div>
+
+                <div>
+                  <span style={styles.dummyLabel}>Payment Method</span>
+                  <div style={styles.dummyPaymentGrid}>
+                    <div style={styles.dummyPayOption}>Cash</div>
+                    <div style={styles.dummyPayOption}>UPI</div>
+                    <div style={{ ...styles.dummyPayOption, ...styles.dummyPayOptionActive }}>
+                      <FiBookOpen size={12} style={{ marginRight: "4px" }} />
+                      Store Credit
+                    </div>
+                  </div>
+                </div>
+
+                <div style={styles.dummyTotalRow}>
+                  <span>Grand Total</span>
+                  <span style={{ color: "var(--accent-emerald)", fontWeight: "800", fontSize: "1.1rem" }}>₹300.00</span>
+                </div>
+
+                <div style={styles.dummyCheckoutBtn}>⚡ Complete & Generate Bill</div>
               </div>
             </div>
           </div>
@@ -258,7 +372,7 @@ const LandingPage = () => {
           className="btn btn-primary"
           style={{ padding: "14px 28px", fontSize: "1rem" }}
         >
-          {user ? "Go to Dashboard" : "Register Free Account"}
+          {user ? "Go to Dashboard" : "Register Free Account"} 
         </button>
       </section>
 
@@ -282,7 +396,7 @@ const styles = {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: "24px 6%",
+    padding: "5px 10%",
     background: "rgba(6, 9, 17, 0.7)",
     backdropFilter: "blur(12px)",
     position: "sticky",
@@ -296,17 +410,9 @@ const styles = {
     gap: "12px",
   },
   logoIcon: {
-    width: "36px",
-    height: "36px",
+    width: "90px",
+    height: "90px",
     objectFit: "contain",
-  },
-  brandName: {
-    fontSize: "1.25rem",
-    fontWeight: "800",
-    letterSpacing: "0.5px",
-    background: "linear-gradient(135deg, #ffffff 40%, var(--text-secondary) 100%)",
-    WebkitBackgroundClip: "text",
-    WebkitTextFillColor: "transparent",
   },
   navLinks: {
     display: "flex",
@@ -443,36 +549,116 @@ const styles = {
     display: "flex",
     gap: "20px",
     flexWrap: "wrap",
+    textAlign: "left",
   },
   dummyLeft: {
-    flex: 2,
-    minWidth: "260px",
+    flex: 1.4,
+    minWidth: "290px",
   },
-  dummySearch: {
-    background: "rgba(255, 255, 255, 0.03)",
+  dummySearchWrapper: {
+    background: "rgba(8, 12, 20, 0.6)",
     border: "1px solid rgba(255, 255, 255, 0.08)",
-    padding: "10px 16px",
+    padding: "10px 14px",
     borderRadius: "8px",
     color: "var(--text-muted)",
-    fontSize: "0.85rem",
-    marginBottom: "16px",
+    fontSize: "0.8rem",
+    marginBottom: "12px",
+    display: "flex",
+    alignItems: "center",
+  },
+  dummyCategoryTabs: {
+    display: "flex",
+    gap: "6px",
+    marginBottom: "12px",
+    overflowX: "hidden",
+  },
+  dummyTab: {
+    fontSize: "0.72rem",
+    padding: "4px 10px",
+    borderRadius: "12px",
+    background: "rgba(255, 255, 255, 0.03)",
+    border: "1px solid rgba(255, 255, 255, 0.05)",
+    color: "var(--text-secondary)",
+    whiteSpace: "nowrap",
+  },
+  dummyTabActive: {
+    background: "var(--accent-blue)",
+    borderColor: "var(--accent-blue)",
+    color: "#ffffff",
   },
   dummyGrid: {
     display: "grid",
     gridTemplateColumns: "1fr 1fr",
-    gap: "12px",
+    gap: "10px",
   },
   dummyProductCard: {
     background: "rgba(255, 255, 255, 0.02)",
     border: "1px solid rgba(255, 255, 255, 0.05)",
-    padding: "14px",
+    padding: "12px",
     borderRadius: "8px",
-    fontSize: "0.9rem",
-    color: "var(--text-secondary)",
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "space-between",
+    minHeight: "120px",
+  },
+  dummyCardHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: "4px",
+  },
+  dummyCategory: {
+    fontSize: "0.65rem",
+    color: "var(--text-muted)",
+  },
+  dummyStockBadge: {
+    fontSize: "0.62rem",
+    fontWeight: "600",
+    padding: "1px 6px",
+    borderRadius: "8px",
+  },
+  dummyProductName: {
+    fontSize: "0.85rem",
+    fontWeight: "700",
+    color: "#ffffff",
+    margin: "0 0 2px 0",
+  },
+  dummyProductBrand: {
+    fontSize: "0.72rem",
+    color: "var(--text-muted)",
+    margin: "0 0 8px 0",
+  },
+  dummyCardFooter: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  dummyProductPrice: {
+    fontSize: "0.95rem",
+    fontWeight: "800",
+    color: "var(--accent-blue)",
+  },
+  dummyAddBtn: {
+    background: "rgba(255, 255, 255, 0.05)",
+    border: "1px solid rgba(255, 255, 255, 0.08)",
+    borderRadius: "4px",
+    padding: "3px 8px",
+    color: "#ffffff",
+    fontSize: "0.72rem",
+    fontWeight: "600",
+  },
+  dummyAddBtnActive: {
+    background: "rgba(59, 130, 246, 0.1)",
+    border: "1px solid var(--accent-blue)",
+    borderRadius: "4px",
+    padding: "3px 8px",
+    color: "var(--accent-blue)",
+    fontSize: "0.72rem",
+    fontWeight: "600",
   },
   dummyRight: {
     flex: 1,
-    minWidth: "200px",
+    minWidth: "240px",
     background: "rgba(255, 255, 255, 0.02)",
     border: "1px solid rgba(255, 255, 255, 0.05)",
     padding: "16px",
@@ -483,33 +669,116 @@ const styles = {
   },
   dummyCartHeader: {
     fontWeight: "700",
-    fontSize: "0.95rem",
+    fontSize: "0.9rem",
     borderBottom: "1px solid rgba(255, 255, 255, 0.05)",
     paddingBottom: "8px",
+    display: "flex",
+    alignItems: "center",
   },
-  dummyCartItem: {
-    fontSize: "0.85rem",
-    color: "var(--text-secondary)",
+  dummyFormGroup: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "4px",
   },
-  dummyCartTotal: {
-    fontWeight: "700",
-    fontSize: "1rem",
-    color: "var(--accent-emerald)",
-    marginTop: "auto",
-    paddingTop: "8px",
-    borderTop: "1px solid rgba(255, 255, 255, 0.05)",
-  },
-  dummyPayMethod: {
-    marginTop: "8px",
-  },
-  activePay: {
-    background: "rgba(59, 130, 246, 0.15)",
-    border: "1px solid rgba(59, 130, 246, 0.25)",
-    color: "var(--accent-blue)",
-    padding: "4px 10px",
-    borderRadius: "6px",
+  dummyLabel: {
     fontSize: "0.75rem",
     fontWeight: "600",
+    color: "var(--text-secondary)",
+    textAlign: "left",
+  },
+  dummySelect: {
+    background: "rgba(8, 12, 20, 0.6)",
+    border: "1px solid rgba(255, 255, 255, 0.08)",
+    padding: "8px 12px",
+    borderRadius: "6px",
+    color: "#ffffff",
+    fontSize: "0.8rem",
+    textAlign: "left",
+  },
+  dummyItemsList: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
+  },
+  dummyItemRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingBottom: "8px",
+    borderBottom: "1px solid rgba(255, 255, 255, 0.03)",
+  },
+  dummyItemName: {
+    fontSize: "0.8rem",
+    fontWeight: "600",
+    color: "#ffffff",
+    textAlign: "left",
+  },
+  dummyItemPrice: {
+    fontSize: "0.72rem",
+    color: "var(--text-secondary)",
+    textAlign: "left",
+    marginTop: "2px",
+  },
+  dummyQtyActions: {
+    display: "flex",
+    alignItems: "center",
+    gap: "6px",
+  },
+  dummyQtyCircle: {
+    background: "rgba(255, 255, 255, 0.05)",
+    border: "1px solid rgba(255, 255, 255, 0.08)",
+    width: "18px",
+    height: "18px",
+    borderRadius: "50%",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    color: "#ffffff",
+  },
+  dummyDivider: {
+    height: "1px",
+    background: "rgba(255, 255, 255, 0.05)",
+  },
+  dummyPaymentGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(3, 1fr)",
+    gap: "6px",
+    marginTop: "4px",
+  },
+  dummyPayOption: {
+    border: "1px solid rgba(255, 255, 255, 0.05)",
+    borderRadius: "4px",
+    padding: "6px 2px",
+    fontSize: "0.72rem",
+    fontWeight: "600",
+    color: "var(--text-secondary)",
+    textAlign: "center",
+  },
+  dummyPayOptionActive: {
+    border: "1px solid var(--accent-blue)",
+    background: "rgba(59, 130, 246, 0.08)",
+    color: "#ffffff",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  dummyTotalRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: "8px",
+    fontSize: "0.85rem",
+    fontWeight: "700",
+  },
+  dummyCheckoutBtn: {
+    background: "var(--accent-blue)",
+    borderRadius: "6px",
+    padding: "10px",
+    color: "#ffffff",
+    fontSize: "0.85rem",
+    fontWeight: "700",
+    textAlign: "center",
+    marginTop: "4px",
   },
   featuresSection: {
     padding: "100px 6%",
