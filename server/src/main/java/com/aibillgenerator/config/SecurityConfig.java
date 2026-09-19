@@ -48,16 +48,22 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         
-        List<String> origins = Arrays.stream(allowedOrigins.split(","))
-                .map(String::trim)
-                .toList();
-
-        configuration.setAllowedOriginPatterns(List.of(
+        List<String> originPatterns = new java.util.ArrayList<>(List.of(
                 "http://localhost:*",
                 "http://127.0.0.1:*",
                 "https://*.vercel.app",
-                "https://indopos.vercel.app"
+                "https://indopos.vercel.app",
+                "https://*.onrender.com"
         ));
+
+        if (allowedOrigins != null && !allowedOrigins.isBlank()) {
+            Arrays.stream(allowedOrigins.split(","))
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .forEach(originPatterns::add);
+        }
+
+        configuration.setAllowedOriginPatterns(originPatterns);
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setExposedHeaders(List.of("Set-Cookie", "Authorization"));
