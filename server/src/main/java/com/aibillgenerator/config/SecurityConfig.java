@@ -83,6 +83,8 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
+                                "/",
+                                "/health",
                                 "/api/v1/users/register",
                                 "/api/v1/users/login",
                                 "/api/v1/users/refresh-token",
