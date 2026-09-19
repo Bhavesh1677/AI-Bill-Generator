@@ -1,1 +1,0 @@
-export const DB_NAME = "ai_bill_generator";
